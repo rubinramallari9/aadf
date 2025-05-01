@@ -1,35 +1,88 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// client/src/App.tsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Import pages
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import Dashboard from './pages/Dashboard';
 
+// Define a protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // If auth is still loading, show a loading indicator
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+      </div>
+    );
+  }
+
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If authenticated, render the children
+  return <>{children}</>;
+};
+
+const App: React.FC = () => {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <Router>
+      <AuthProvider>
+        <Routes>
+          {/* Auth Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Protected Routes */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Redirect root to dashboard or login */}
+          <Route 
+            path="/" 
+            element={
+              <React.Fragment>
+                {localStorage.getItem('token') ? (
+                  <Navigate to="/dashboard" replace />
+                ) : (
+                  <Navigate to="/login" replace />
+                )}
+              </React.Fragment>
+            } 
+          />
 
-export default App
+          {/* 404 Route */}
+          <Route 
+            path="*" 
+            element={
+              <div className="flex flex-col items-center justify-center h-screen">
+                <h1 className="text-4xl font-bold mb-4">404 - Page Not Found</h1>
+                <p className="mb-8">The page you are looking for doesn't exist.</p>
+                <a 
+                  href="/"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Go to Home
+                </a>
+              </div>
+            } 
+          />
+        </Routes>
+      </AuthProvider>
+    </Router>
+  );
+};
+
+export default App;
