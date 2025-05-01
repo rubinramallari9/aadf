@@ -1,0 +1,66 @@
+Login Implementation
+Looking at the code, login functionality is implemented through the LoginView class in the backend (server/aadf/views.py), and it appears all user roles use the same login screen at /login.
+However, I don't see specific admin or evaluator accounts pre-created in the code. Looking at the registration implementation, there's a security check that prevents creating admin or evaluator accounts through the standard registration process:
+typescript// From RegisterView in server/aadf/views.py
+if role != 'vendor' and not request.user.is_authenticated:
+    return Response(
+        {'error': 'Only vendor registration is allowed without admin approval'},
+        status=status.HTTP_403_FORBIDDEN
+    )
+    
+// If staff/admin registration, check if request is from an admin
+if role in ['staff', 'admin'] and (not request.user.is_authenticated or request.user.role != 'admin'):
+    return Response(
+        {'error': 'Only administrators can create staff or admin accounts'},
+        status=status.HTTP_403_FORBIDDEN
+    )
+This means:
+
+Anyone can register as a vendor
+Only an admin can create other admin, staff, or evaluator accounts
+
+How to Create Admin/Evaluator Accounts
+Since you've already created staff and vendor accounts, you have two options to create admin and evaluator accounts:
+Option 1: Direct Database Insertion (Development Environment)
+Use Django's admin interface or direct database access to create these users with the appropriate roles.
+Option 2: Create an Admin First via Django Management Command
+You could add a custom Django management command to create an initial admin user. For example:create_admin.py (Django Management Command)Code # server/aadf/management/commands/create_admin.py
+
+from django.core.management.base import BaseCommand
+from django.contrib.auth import get_user_model
+from aadf.models import User
+
+class Command(BaseCommand):
+    help = 'Create an admin user and/or evYou would run this command like:
+bash# Create admin user
+python manage.py create_admin --username=admin --email=admin@example.com --password=securepassword --role=admin
+
+# Create evaluator user
+python manage.py create_admin --username=evaluator1 --email=evaluator@example.com --password=evaluatorpass --role=evaluator
+Once you have an admin account, you can then login and create other user accounts through the application interface.
+Example User Creation Flow
+Here's the typical flow to set up all user roles:
+
+Create admin account using the custom command above
+Login as admin at /login
+Create evaluator accounts
+
+As admin, navigate to user management
+Create users with the "evaluator" role
+
+
+Create additional staff accounts (if needed)
+
+Create users with the "staff" role
+
+
+Vendors self-register through the registration page
+
+Accessing Different User Areas
+Based on my analysis of the React components:
+
+After login, each user is directed to the Dashboard (/dashboard)
+The Dashboard component (in client/src/pages/Dashboard.tsx) renders different content based on the user's role
+The Sidebar component (in client/src/components/layout/Sidebar.tsx) shows different navigation options based on role
+
+The system appears well-structured with proper role-based access control throughout the application.

@@ -1,4 +1,4 @@
-// Updated Layout.tsx with toggle functionality for all screen sizes
+// Fixed Layout.tsx with improved notification handling
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,9 +9,18 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, isAuthenticated, logout } = useAuth();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true); // Default open on desktop
@@ -42,7 +51,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       const fetchUnreadCount = async () => {
         try {
           const response = await notificationApi.getUnreadCount();
-          setUnreadCount(response.count);
+          if (response && typeof response.count === 'number') {
+            setUnreadCount(response.count);
+          }
         } catch (error) {
           console.error('Failed to fetch unread count:', error);
         }
@@ -68,19 +79,34 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const fetchNotifications = async () => {
     try {
       const response = await notificationApi.getAll();
-      // Sort by date (newest first) and filter to get only the recent ones
-      const sortedNotifications = response
-        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5); // Get only the 5 most recent
       
-      setNotifications(sortedNotifications);
-      const unreadCount = response.filter((n: any) => !n.is_read).length;
+      // Handle different response formats
+      let notificationsData: Notification[] = [];
+      
+      if (Array.isArray(response)) {
+        notificationsData = response;
+      } else if (response && response.results && Array.isArray(response.results)) {
+        notificationsData = response.results;
+      } else {
+        console.warn('Unexpected notification response format:', response);
+        return; // Exit if format is unexpected
+      }
+      
+      // Sort notifications by date (newest first)
+      const sortedNotifications = [...notificationsData].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      
+      // Get only the 5 most recent
+      setNotifications(sortedNotifications.slice(0, 5));
+      
+      // Count unread notifications
+      const unreadCount = notificationsData.filter(n => !n.is_read).length;
       setUnreadCount(unreadCount);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     }
   };
-  
 
   // If not authenticated, just render the children without the layout
   if (!isAuthenticated) {
@@ -110,7 +136,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               {/* Notifications dropdown */}
               <div className="relative mr-4">
                 <button
-                  onClick={() => setNotificationsOpen(!notificationsOpen)}
+                  onClick={() => {
+                    // Fetch notifications when opening the dropdown
+                    if (!notificationsOpen) {
+                      fetchNotifications();
+                    }
+                    setNotificationsOpen(!notificationsOpen);
+                  }}
                   className="relative p-1 text-gray-600 hover:text-blue-600 focus:outline-none"
                 >
                   <span className="material-icons">notifications</span>
@@ -131,6 +163,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                             try {
                               await notificationApi.markAllAsRead();
                               setUnreadCount(0);
+                              // Update local notifications state to mark all as read
+                              setNotifications(prev => 
+                                prev.map(n => ({ ...n, is_read: true }))
+                              );
                             } catch (error) {
                               console.error('Failed to mark all as read:', error);
                             }
@@ -142,7 +178,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       </div>
                       <div className="max-h-96 overflow-y-auto">
                         {notifications.length > 0 ? (
-                          notifications.slice(0, 5).map(notification => (
+                          notifications.map(notification => (
                             <div 
                               key={notification.id} 
                               className={`px-4 py-3 hover:bg-gray-50 ${notification.is_read ? '' : 'bg-blue-50'}`}

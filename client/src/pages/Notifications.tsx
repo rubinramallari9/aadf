@@ -1,4 +1,4 @@
-// client/src/pages/Notifications.tsx
+// Fixed Notifications.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
@@ -32,15 +32,34 @@ const Notifications: React.FC = () => {
       setLoading(true);
       const response = await notificationApi.getAll();
       
-      // Sort notifications by date (newest first)
-      const sortedNotifications = response.sort((a: Notification, b: Notification) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-      
-      setNotifications(sortedNotifications);
+      // Check if response is an array before sorting
+      if (Array.isArray(response)) {
+        // Sort notifications by date (newest first)
+        const sortedNotifications = [...response].sort((a: Notification, b: Notification) => {
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+        
+        setNotifications(sortedNotifications);
+      } else {
+        // Handle case where response might have a different structure
+        // For example, if it has a 'results' property containing the notifications
+        if (response && response.results && Array.isArray(response.results)) {
+          const sortedNotifications = [...response.results].sort((a: Notification, b: Notification) => {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+          
+          setNotifications(sortedNotifications);
+        } else {
+          // If response has an unexpected format, set an empty array
+          console.error('Unexpected response format:', response);
+          setNotifications([]);
+        }
+      }
     } catch (err: any) {
       console.error('Error fetching notifications:', err);
       setError(err.message || 'Failed to load notifications');
+      // Ensure we set notifications to an empty array when there's an error
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
