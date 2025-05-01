@@ -1,4 +1,4 @@
-// client/src/components/layout/Sidebar.tsx
+// Updated Sidebar.tsx with ability to be toggled on all screen sizes
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,13 +11,6 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
-
-  // Close sidebar on route changes (for mobile)
-  useEffect(() => {
-    if (isOpen) {
-      onClose();
-    }
-  }, [location.pathname, onClose, isOpen]);
 
   // Function to get navigation items based on user role
   const getNavItems = () => {
@@ -51,21 +44,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     return navItems;
   };
 
-  // Generate CSS classes for the sidebar container
+  // Sidebar positioning and visibility
+  // Using absolute positioning instead of fixed for more flexibility
   const sidebarClasses = `
-    fixed inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-blue-800 to-blue-600 
-    transform transition-transform duration-300 ease-in-out 
-    ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-    md:translate-x-0 md:static md:inset-0
-    flex flex-col h-full
+    absolute md:absolute inset-y-0 left-0 z-30 w-64 bg-gradient-to-b from-blue-800 to-blue-600 
+    transform transition-transform duration-300 ease-in-out h-full
+    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
   `;
 
   return (
     <>
-      {/* Overlay for mobile */}
+      {/* Overlay for mobile and desktop when sidebar is open */}
       {isOpen && (
         <div 
-          className="md:hidden fixed inset-0 z-30 bg-black bg-opacity-50 transition-opacity" 
+          className="md:hidden fixed inset-0 z-20 bg-black bg-opacity-50 transition-opacity" 
           onClick={onClose}
         />
       )}
@@ -76,14 +68,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="flex items-center justify-between h-16 px-6 bg-blue-900">
           <Link to="/dashboard" className="flex items-center">
             <img src="/src/assets/aadf-logo-new.svg" alt="AADF Logo" className="h-8 w-auto mr-2 filter brightness-0 invert" />
-            <span className="text-white font-bold">Procurement</span>
+           
           </Link>
-          <button 
-            onClick={onClose}
-            className="md:hidden text-white focus:outline-none"
-          >
-            <span className="material-icons">close</span>
-          </button>
+         
         </div>
 
         {/* Navigation */}
