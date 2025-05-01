@@ -1,0 +1,32 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+
+# Django
+*.db
+*.pot
+*.pyc
+*.pyo
+*.pyd
+**/migrations/
+**/media/
+db.sqlite3
+
+# Vite / Node.js (Frontend client)
+client/node_modules/
+client/dist/
+client/.env
+client/.vite/
+client/package-lock.json
+client/yarn.lock
+client/pnpm-lock.yaml
+
+# macOS
+.DS_Store
+
+img
+# VSCode
+.vscode/
