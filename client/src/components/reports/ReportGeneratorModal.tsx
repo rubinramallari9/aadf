@@ -76,14 +76,14 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
       const data = await response.json();
       
       // Handle different response formats
-      let tendersData = [];
+      let tendersData: Tender[] = [];
       if (data) {
         if (Array.isArray(data)) {
           tendersData = data;
         } else if (data.results && Array.isArray(data.results)) {
           tendersData = data.results;
         } else if (typeof data === 'object') {
-          tendersData = Object.values(data);
+          tendersData = Object.values(data) as Tender[];
         }
       }
       
@@ -125,7 +125,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: value
+        [name]: type === 'select-one' && name === 'tender_id' ? parseInt(value) : value
       }));
     }
   };

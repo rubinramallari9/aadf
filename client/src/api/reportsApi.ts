@@ -99,4 +99,7 @@ export const reportsApi = {
       const errorData = await response.json();
       throw new Error(errorData.error || 'Failed to generate tender report');
     }
-    //not finished
+    
+    return response.json();
+  }
+};

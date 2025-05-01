@@ -27,6 +27,7 @@ import VendorDetail from './pages/vendors/VendorDetail';
 import VendorCreate from './pages/vendors/VendorCreate';
 import VendorEdit from './pages/vendors/VendorEdit';
 import Notifications from './pages/Notifications';
+import Reports from './pages/Reports';
 
 // Define a protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -121,6 +122,15 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               } 
             />
+
+          <Route 
+            path="/reports" 
+            element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            } 
+          />
 
             {/* Offer Routes */}
             <Route 
