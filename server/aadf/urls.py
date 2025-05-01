@@ -5,7 +5,9 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     TenderViewSet, OfferViewSet, TenderDocumentViewSet, OfferDocumentViewSet,
     EvaluationViewSet, LoginView, LogoutView, RegisterView, ChangePasswordView,
-    DocumentDownloadView
+    DocumentDownloadView, VendorCompanyViewSet, EvaluationCriteriaViewSet,
+    ApprovalViewSet, ReportViewSet, NotificationViewSet, AuditLogViewSet,
+    UserProfileView, DashboardView, TenderSearchView
 )
 
 router = DefaultRouter()
@@ -14,6 +16,12 @@ router.register(r'offers', OfferViewSet)
 router.register(r'tender-documents', TenderDocumentViewSet)
 router.register(r'offer-documents', OfferDocumentViewSet)
 router.register(r'evaluations', EvaluationViewSet)
+router.register(r'vendor-companies', VendorCompanyViewSet)
+router.register(r'evaluation-criteria', EvaluationCriteriaViewSet)
+router.register(r'approvals', ApprovalViewSet)
+router.register(r'reports', ReportViewSet)
+router.register(r'notifications', NotificationViewSet)
+router.register(r'audit-logs', AuditLogViewSet)
 
 urlpatterns = [
     # API Endpoints
@@ -24,9 +32,14 @@ urlpatterns = [
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/change-password/', ChangePasswordView.as_view(), name='change-password'),
+    path('auth/profile/', UserProfileView.as_view(), name='user-profile'),
 
     # File Download Endpoint
     path('download/<str:document_type>/<int:document_id>/', DocumentDownloadView.as_view(), name='document-download'),
+
+    # Custom endpoints
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('tenders/search/', TenderSearchView.as_view(), name='tender-search'),
 
     # DRF browsable API authentication
     path('api-auth/', include('rest_framework.urls')),

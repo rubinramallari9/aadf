@@ -1,4 +1,6 @@
-from rest_framework import viewsets, permissions, status
+# server/aadf/views.py
+
+from rest_framework import viewsets, permissions, status, serializers  # Added serializers import
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -23,7 +25,7 @@ from .serializers import (
     OfferDocumentSerializer, EvaluationCriteriaSerializer, EvaluationSerializer,
     ApprovalSerializer, ReportSerializer, NotificationSerializer, AuditLogSerializer
 )
-from .permissions import IsStaffOrAdmin, IsVendor, IsEvaluator
+from .permissions import IsStaffOrAdmin, IsVendor, IsEvaluator, IsAdminUser  # Added IsAdminUser import
 
 
 class TenderViewSet(viewsets.ModelViewSet):
@@ -338,3 +340,291 @@ class DocumentDownloadView(APIView):
 
         except (TenderDocument.DoesNotExist, OfferDocument.DoesNotExist):
             raise Http404("Document not found")
+
+
+class VendorCompanyViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing vendor companies"""
+    queryset = VendorCompany.objects.all()
+    serializer_class = VendorCompanySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter vendor companies based on user role"""
+        user = self.request.user
+        if user.role == 'vendor':
+            return VendorCompany.objects.filter(users=user)
+        return VendorCompany.objects.all()
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def assign_user(self, request, pk=None):
+        """Assign a user to a vendor company"""
+        company = self.get_object()
+        user_id = request.data.get('user_id')
+
+        try:
+            user = User.objects.get(id=user_id)
+            if user.role == 'vendor':
+                company.users.add(user)
+                return Response({'status': 'user assigned'})
+            return Response({'error': 'user must have vendor role'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({'error': 'user not found'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def remove_user(self, request, pk=None):
+        """Remove a user from a vendor company"""
+        company = self.get_object()
+        user_id = request.data.get('user_id')
+
+        try:
+            user = User.objects.get(id=user_id)
+            company.users.remove(user)
+            return Response({'status': 'user removed'})
+        except User.DoesNotExist:
+            return Response({'error': 'user not found'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+
+class EvaluationCriteriaViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing evaluation criteria"""
+    queryset = EvaluationCriteria.objects.all()
+    serializer_class = EvaluationCriteriaSerializer
+    permission_classes = [permissions.IsAuthenticated, IsStaffOrAdmin]
+
+    def get_queryset(self):
+        """Filter by tender_id if provided"""
+        tender_id = self.request.query_params.get('tender_id')
+        if tender_id:
+            return EvaluationCriteria.objects.filter(tender_id=tender_id)
+        return EvaluationCriteria.objects.all()
+
+
+class ApprovalViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing approvals"""
+    queryset = Approval.objects.all()
+    serializer_class = ApprovalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter approvals based on user role"""
+        user = self.request.user
+        if user.role in ['staff', 'admin']:
+            return Approval.objects.all()
+        return Approval.objects.filter(user=user)
+
+    def perform_create(self, serializer):
+        """Auto-assign user to the authenticated user"""
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffOrAdmin])
+    def approve(self, request, pk=None):
+        """Approve a tender"""
+        approval = self.get_object()
+        if approval.status == 'pending':
+            approval.status = 'approved'
+            approval.save()
+            return Response({'status': 'approved'})
+        return Response({'error': 'approval already processed'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffOrAdmin])
+    def reject(self, request, pk=None):
+        """Reject a tender"""
+        approval = self.get_object()
+        if approval.status == 'pending':
+            approval.status = 'rejected'
+            approval.comments = request.data.get('comments', '')
+            approval.save()
+            return Response({'status': 'rejected'})
+        return Response({'error': 'approval already processed'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+
+class ReportViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing reports"""
+    queryset = Report.objects.all()
+    serializer_class = ReportSerializer
+    permission_classes = [permissions.IsAuthenticated, IsStaffOrAdmin]
+
+    def perform_create(self, serializer):
+        """Auto-assign generated_by to the authenticated user"""
+        serializer.save(generated_by=self.request.user)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsStaffOrAdmin])
+    def generate_tender_report(self, request):
+        """Generate a report for a specific tender"""
+        tender_id = request.data.get('tender_id')
+        try:
+            tender = Tender.objects.get(id=tender_id)
+            # Generate report logic here
+            report_filename = f"tender_report_{tender.reference_number}.pdf"
+            report_filepath = f"reports/{report_filename}"
+
+            report = Report.objects.create(
+                tender=tender,
+                generated_by=request.user,
+                report_type='tender_commission',
+                filename=report_filename,
+                file_path=report_filepath
+            )
+
+            serializer = self.get_serializer(report)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Tender.DoesNotExist:
+            return Response({'error': 'tender not found'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing notifications"""
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter notifications for the authenticated user"""
+        return Notification.objects.filter(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def mark_as_read(self, request, pk=None):
+        """Mark a notification as read"""
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response({'status': 'marked as read'})
+
+    @action(detail=False, methods=['post'])
+    def mark_all_as_read(self, request):
+        """Mark all notifications as read for the authenticated user"""
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return Response({'status': 'all notifications marked as read'})
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for viewing audit logs"""
+    queryset = AuditLog.objects.all()
+    serializer_class = AuditLogSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+
+    def get_queryset(self):
+        """Filter audit logs by query parameters"""
+        queryset = AuditLog.objects.all()
+
+        # Filter by user_id
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+
+        # Filter by action
+        action = self.request.query_params.get('action')
+        if action:
+            queryset = queryset.filter(action=action)
+
+        # Filter by entity_type
+        entity_type = self.request.query_params.get('entity_type')
+        if entity_type:
+            queryset = queryset.filter(entity_type=entity_type)
+
+        # Filter by date range
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date and end_date:
+            queryset = queryset.filter(created_at__range=[start_date, end_date])
+
+        return queryset
+
+
+class UserProfileView(APIView):
+    """Handle user profile operations"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Get authenticated user's profile"""
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+    def put(self, request):
+        """Update authenticated user's profile"""
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DashboardView(APIView):
+    """Dashboard data endpoint"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Get dashboard statistics based on user role"""
+        user = request.user
+        data = {}
+
+        if user.role in ['admin', 'staff']:
+            data.update({
+                'total_tenders': Tender.objects.count(),
+                'published_tenders': Tender.objects.filter(status='published').count(),
+                'total_offers': Offer.objects.count(),
+                'pending_approvals': Approval.objects.filter(status='pending').count(),
+                'recent_activities': AuditLog.objects.order_by('-created_at')[:10].values()
+            })
+        elif user.role == 'vendor':
+            vendor_companies = VendorCompany.objects.filter(users=user)
+            data.update({
+                'published_tenders': Tender.objects.filter(status='published').count(),
+                'my_offers': Offer.objects.filter(vendor__in=vendor_companies).count(),
+                'pending_offers': Offer.objects.filter(vendor__in=vendor_companies, status='draft').count(),
+                'unread_notifications': Notification.objects.filter(user=user, is_read=False).count()
+            })
+        elif user.role == 'evaluator':
+            data.update({
+                'tenders_to_evaluate': Tender.objects.filter(status='closed').count(),
+                'completed_evaluations': Evaluation.objects.filter(evaluator=user).count(),
+                'pending_evaluations': Evaluation.objects.filter(evaluator=user, score__isnull=True).count()
+            })
+
+        return Response(data)
+
+
+class TenderSearchView(APIView):
+    """Search tenders endpoint"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Search tenders with various filters"""
+        queryset = Tender.objects.all()
+
+        # Filter by status
+        status_param = request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+
+        # Filter by category
+        category = request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category=category)
+
+        # Search in title and description
+        search_query = request.query_params.get('search')
+        if search_query:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+
+        # Filter by date range
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        if start_date and end_date:
+            queryset = queryset.filter(created_at__range=[start_date, end_date])
+
+        # Apply user role restrictions
+        if request.user.role == 'vendor':
+            queryset = queryset.filter(status='published')
+
+        serializer = TenderSerializer(queryset, many=True)
+        return Response(serializer.data)
