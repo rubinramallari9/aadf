@@ -17,6 +17,7 @@ import TenderSearch from './pages/tenders/TenderSearch';
 
 // Import offer pages
 import OfferList from './pages/offers/OfferList';
+import Home from './pages/Home';
 
 // Define a protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -115,13 +116,7 @@ const App: React.FC = () => {
           <Route 
             path="/" 
             element={
-              <React.Fragment>
-                {localStorage.getItem('token') ? (
-                  <Navigate to="/dashboard" replace />
-                ) : (
-                  <Navigate to="/login" replace />
-                )}
-              </React.Fragment>
+              <Home/>
             } 
           />
 
