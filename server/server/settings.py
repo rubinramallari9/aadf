@@ -1,4 +1,4 @@
-# server/procurement_platform/settings.py
+# server/server/settings.py
 
 """
 Django settings for AADF procurement platform project.
@@ -49,9 +49,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'aadf.middleware.AuditLoggingMiddleware',
     'aadf.middleware.TenderAccessMiddleware',
+    'aadf.middleware.TokenExpirationMiddleware',
 ]
 
-ROOT_URLCONF = 'procurement_platform.urls'
+ROOT_URLCONF = 'server.urls'
 
 TEMPLATES = [
     {
@@ -69,7 +70,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'procurement_platform.wsgi.application'
+WSGI_APPLICATION = 'server.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -145,7 +146,18 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day'
+    }
 }
+
+# Token expiration time (in days)
+TOKEN_EXPIRY_DAYS = 1
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
@@ -158,7 +170,12 @@ DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite dev server
+    "http://127.0.0.1:5173",
 ]
+
+# Allow credentials in CORS requests
+CORS_ALLOW_CREDENTIALS = True
 
 # Email settings for notification
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Use console for development

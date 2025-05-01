@@ -1,4 +1,4 @@
-# server/procurement_platform/urls.py
+# server/server/urls.py
 
 from django.contrib import admin
 from django.urls import path, include

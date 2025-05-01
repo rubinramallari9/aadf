@@ -7,7 +7,7 @@ from .views import (
     EvaluationViewSet, LoginView, LogoutView, RegisterView, ChangePasswordView,
     DocumentDownloadView, VendorCompanyViewSet, EvaluationCriteriaViewSet,
     ApprovalViewSet, ReportViewSet, NotificationViewSet, AuditLogViewSet,
-    UserProfileView, DashboardView, TenderSearchView
+    UserProfileView, DashboardView, TenderSearchView, UserManagementView
 )
 
 router = DefaultRouter()
@@ -40,6 +40,11 @@ urlpatterns = [
     # Custom endpoints
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('tenders/search/', TenderSearchView.as_view(), name='tender-search'),
+    
+    # User management endpoints
+    path('users/', UserManagementView.as_view(), name='user-list'),
+    path('users/<int:user_id>/', UserManagementView.as_view(), name='user-detail'),
+    path('users/<int:user_id>/reset-password/', UserManagementView.as_view(), name='user-reset-password'),
 
     # DRF browsable API authentication
     path('api-auth/', include('rest_framework.urls')),
