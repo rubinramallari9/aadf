@@ -24,12 +24,18 @@ const Home: React.FC = () => {
         
         // Fetch published tenders
         const response = await tenderApi.getAll({ status: 'published' });
-        setPublicTenders(response.slice(0, 5)); // Get only latest 5 tenders
+        
+        // Check if response is an array, if not, it might be in a 'results' property
+        const tenders = Array.isArray(response) ? response : 
+                       (response.results ? response.results : []);
+        
+        // Take only the first 5 tenders
+        setPublicTenders(tenders.slice(0, 5)); 
         
         // Mock stats data for now (you can replace with actual API calls)
         setStats({
           totalTenders: 150,
-          activeTenders: response.length,
+          activeTenders: tenders.length,
           totalVendors: 75,
           successfulBids: 120,
         });
@@ -39,7 +45,6 @@ const Home: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchPublicData();
   }, []);
 

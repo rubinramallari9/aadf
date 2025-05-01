@@ -40,13 +40,37 @@ const TenderList: React.FC = () => {
       
       const response = await tenderApi.getAll(params);
       
+      // Handle the case where response might be an object with 'results' property
+      // or directly an array of tenders
+      let tendersData = [];
+      if (response) {
+        if (Array.isArray(response)) {
+          tendersData = response;
+        } else if (response.results && Array.isArray(response.results)) {
+          tendersData = response.results;
+        } else if (typeof response === 'object') {
+          // If it's some other object structure, you may need to adjust this
+          tendersData = Object.values(response);
+        }
+      }
+      
       // Sort the tenders
-      let sortedTenders = [...response];
+      let sortedTenders = [...tendersData];
       if (sortBy.startsWith('-')) {
         const field = sortBy.slice(1);
-        sortedTenders.sort((a, b) => new Date(b[field]).getTime() - new Date(a[field]).getTime());
+        sortedTenders.sort((a, b) => {
+          if (field === 'submission_deadline' || field === 'created_at') {
+            return new Date(b[field]).getTime() - new Date(a[field]).getTime();
+          }
+          return b[field] > a[field] ? 1 : -1;
+        });
       } else {
-        sortedTenders.sort((a, b) => new Date(a[sortBy]).getTime() - new Date(b[sortBy]).getTime());
+        sortedTenders.sort((a, b) => {
+          if (sortBy === 'submission_deadline' || sortBy === 'created_at') {
+            return new Date(a[sortBy]).getTime() - new Date(b[sortBy]).getTime();
+          }
+          return a[sortBy] > b[sortBy] ? 1 : -1;
+        });
       }
       
       setTenders(sortedTenders);
