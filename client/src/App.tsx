@@ -8,6 +8,16 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
 
+// Import tender pages
+import TenderList from './pages/tenders/TenderList';
+import TenderDetail from './pages/tenders/TenderDetail';
+import TenderCreate from './pages/tenders/TenderCreate';
+import TenderEdit from './pages/tenders/TenderEdit';
+import TenderSearch from './pages/tenders/TenderSearch';
+
+// Import offer pages
+import OfferList from './pages/offers/OfferList';
+
 // Define a protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +55,58 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Tender Routes */}
+          <Route 
+            path="/tenders" 
+            element={
+              <ProtectedRoute>
+                <TenderList />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/tenders/search" 
+            element={
+              <ProtectedRoute>
+                <TenderSearch />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/tenders/create" 
+            element={
+              <ProtectedRoute>
+                <TenderCreate />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/tenders/:id" 
+            element={
+              <ProtectedRoute>
+                <TenderDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/tenders/:id/edit" 
+            element={
+              <ProtectedRoute>
+                <TenderEdit />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Offer Routes */}
+          <Route 
+            path="/offers" 
+            element={
+              <ProtectedRoute>
+                <OfferList />
               </ProtectedRoute>
             } 
           />

@@ -626,4 +626,212 @@ const Dashboard: React.FC = () => {
           {/* Tenders to Evaluate Card */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-blue-100 text-blue-600"></div>
+              <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+                <span className="material-icons">grade</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm text-gray-500 font-semibold">Tenders to Evaluate</p>
+                <p className="text-2xl font-bold text-gray-800">{dashboardData.tenders?.total_to_evaluate || 0}</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="text-sm">
+                <p className="text-gray-500">Evaluated</p>
+                <p className="font-medium">{dashboardData.tenders?.evaluated || 0}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Evaluations Card */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-green-100 text-green-600">
+                <span className="material-icons">assignment</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm text-gray-500 font-semibold">My Evaluations</p>
+                <p className="text-2xl font-bold text-gray-800">{dashboardData.evaluations?.completed || 0}</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="text-sm">
+                <p className="text-gray-500">Pending</p>
+                <p className="font-medium">{dashboardData.pending_evaluations || 0}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Notifications Card */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                <span className="material-icons">notifications</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm text-gray-500 font-semibold">Notifications</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {dashboardData.unread_notifications || 0}
+                  <span className="text-sm text-gray-500 font-normal"> unread</span>
+                </p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <Link 
+                to="/notifications" 
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
+              >
+                View all notifications
+                <span className="material-icons text-base ml-1">arrow_forward</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Tenders */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800">Recent Tenders for Evaluation</h2>
+            <Link to="/evaluations" className="text-blue-600 hover:text-blue-800 flex items-center text-sm font-medium">
+              View all
+              <span className="material-icons text-base ml-1">arrow_forward</span>
+            </Link>
+          </div>
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Reference
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Offers
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {dashboardData.recent_tenders?.map((tender: any) => (
+                  <tr key={tender.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {tender.reference_number}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {tender.title}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        tender.status === 'closed' 
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {tender.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {tender.offer_count || 0} offers
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link to={`/tenders/${tender.id}/evaluate`} className="text-blue-600 hover:text-blue-900">
+                        Evaluate
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+                {(!dashboardData.recent_tenders || dashboardData.recent_tenders.length === 0) && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                      No tenders available for evaluation
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* My Recent Evaluations */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800">My Recent Evaluations</h2>
+            <Link to="/evaluations" className="text-blue-600 hover:text-blue-800 flex items-center text-sm font-medium">
+              View all
+              <span className="material-icons text-base ml-1">arrow_forward</span>
+            </Link>
+          </div>
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tender
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Criteria
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Score
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {dashboardData.evaluations?.recent?.map((evaluation: any) => (
+                  <tr key={evaluation.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {evaluation.offer__tender__reference_number}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {evaluation.criteria__name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {evaluation.score}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(evaluation.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link to={`/evaluations/${evaluation.id}`} className="text-blue-600 hover:text-blue-900">
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+                {(!dashboardData.evaluations?.recent || dashboardData.evaluations.recent.length === 0) && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                      No recent evaluations found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Default fallback
+  return (
+    <Layout>
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-gray-900">Welcome to AADF Procurement Platform</h1>
+        <p className="mt-4 text-gray-600">Please select an option from the navigation menu.</p>
+      </div>
+    </Layout>
+  );
+}
+export default Dashboard
