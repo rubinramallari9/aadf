@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../contexts/AuthContext';
+import { reportsApi } from '../api/reportsApi';
 import ReportGeneratorModal from '../components/reports/ReportGeneratorModal';
 
 // Define the types for our report objects
@@ -56,30 +57,18 @@ const Reports: React.FC = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      // Implement API call to fetch reports
-      const response = await fetch('/api/reports/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Token ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch reports');
-      }
-
-      const data = await response.json();
+      // Use the reportsApi which properly handles authentication
+      const response = await reportsApi.getAll();
       
       // Handle different response formats
       let reportsData = [];
-      if (data) {
-        if (Array.isArray(data)) {
-          reportsData = data;
-        } else if (data.results && Array.isArray(data.results)) {
-          reportsData = data.results;
-        } else if (typeof data === 'object') {
-          reportsData = Object.values(data);
+      if (response) {
+        if (Array.isArray(response)) {
+          reportsData = response;
+        } else if (response.results && Array.isArray(response.results)) {
+          reportsData = response.results;
+        } else if (typeof response === 'object') {
+          reportsData = Object.values(response);
         }
       }
       
@@ -117,26 +106,18 @@ const Reports: React.FC = () => {
     fetchReports();
   };
 
-  const downloadReport = (reportId: number) => {
-    // Implement download logic
-    window.open(`/api/download/report/${reportId}/?token=${localStorage.getItem('token')}`, '_blank');
+  const downloadReport = async (reportId: number) => {
+    try {
+      await reportsApi.downloadReport(reportId);
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      alert('Failed to download report');
+    }
   };
 
   const handleReportGeneration = async (data: any) => {
     try {
-      const response = await fetch('/api/reports/generate_tender_report/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate report');
-      }
-
+      await reportsApi.generateReport(data);
       await fetchReports(); // Refresh the list
     } catch (err: any) {
       console.error('Error generating report:', err);

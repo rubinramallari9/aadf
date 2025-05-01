@@ -37,8 +37,14 @@ export const reportsApi = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to get reports');
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get reports');
+      } else {
+        // If the response isn't JSON, throw a generic error
+        throw new Error('Failed to get reports - authentication may have failed');
+      }
     }
     
     return response.json();
@@ -51,8 +57,13 @@ export const reportsApi = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to get report');
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get report');
+      } else {
+        throw new Error('Failed to get report - authentication may have failed');
+      }
     }
     
     return response.json();
@@ -66,18 +77,22 @@ export const reportsApi = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to generate report');
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate report');
+      } else {
+        throw new Error('Failed to generate report - authentication may have failed');
+      }
     }
     
     return response.json();
   },
   
   downloadReport: async (id: number) => {
+    // Open the download URL in a new tab/window
     const token = localStorage.getItem('token');
     const downloadUrl = `${API_ENDPOINTS.REPORTS.DOWNLOAD(id)}?token=${token}`;
-    
-    // Open the download URL in a new tab/window
     window.open(downloadUrl, '_blank');
     
     return true;
@@ -96,8 +111,13 @@ export const reportsApi = {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to generate tender report');
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate tender report');
+      } else {
+        throw new Error('Failed to generate tender report - authentication may have failed');
+      }
     }
     
     return response.json();

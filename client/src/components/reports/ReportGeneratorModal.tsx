@@ -1,5 +1,6 @@
 // client/src/components/reports/ReportGeneratorModal.tsx
 import React, { useState, useEffect } from 'react';
+import { tenderApi } from '../../api/api';
 
 interface Tender {
   id: number;
@@ -54,36 +55,36 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchTenders();
+      
+      // Add escape key handler
+      const handleEscape = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          onClose();
+        }
+      };
+      
+      document.addEventListener('keydown', handleEscape);
+      return () => {
+        document.removeEventListener('keydown', handleEscape);
+      };
     }
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   const fetchTenders = async () => {
     try {
       setLoading(true);
-      // Fetch tenders that can have reports generated
-      const response = await fetch('/api/tenders/?status=closed,awarded', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Token ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Use tenderApi which properly handles authentication
+      const response = await tenderApi.getAll({ status: 'closed,awarded' });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch tenders');
-      }
-
-      const data = await response.json();
-      
       // Handle different response formats
       let tendersData: Tender[] = [];
-      if (data) {
-        if (Array.isArray(data)) {
-          tendersData = data;
-        } else if (data.results && Array.isArray(data.results)) {
-          tendersData = data.results;
-        } else if (typeof data === 'object') {
-          tendersData = Object.values(data) as Tender[];
+      if (response) {
+        if (Array.isArray(response)) {
+          tendersData = response;
+        } else if (response.results && Array.isArray(response.results)) {
+          tendersData = response.results;
+        } else if (typeof response === 'object') {
+          tendersData = Object.values(response) as Tender[];
         }
       }
       
@@ -156,8 +157,12 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
   return (
     <div className="fixed z-10 inset-0 overflow-y-auto">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        {/* Background overlay */}
-        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+        {/* Background overlay - Make it clickable to close */}
+        <div 
+          className="fixed inset-0 transition-opacity" 
+          aria-hidden="true"
+          onClick={onClose}
+        >
           <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
         </div>
 
@@ -168,13 +173,22 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
           role="dialog" 
           aria-modal="true" 
           aria-labelledby="modal-headline"
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="sm:flex sm:items-start">
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-headline">
-                  Generate New Report
-                </h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-headline">
+                    Generate New Report
+                  </h3>
+                  <button
+                    onClick={onClose}
+                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <span className="material-icons">close</span>
+                  </button>
+                </div>
                 
                 {error && (
                   <div className="mt-2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
