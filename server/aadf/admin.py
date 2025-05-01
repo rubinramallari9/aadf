@@ -28,7 +28,7 @@ class VendorCompanyAdmin(admin.ModelAdmin):
     list_display = ('name', 'registration_number', 'email', 'phone', 'created_at')
     search_fields = ('name', 'registration_number', 'email')
     list_filter = ('created_at',)
-    filter_horizontal = ('users',)
+    # Removed filter_horizontal = ('users',) because the field uses a custom through model
 
 
 @admin.register(VendorUser)
