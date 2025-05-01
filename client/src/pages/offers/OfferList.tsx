@@ -21,6 +21,7 @@ interface Offer {
   financial_score: number;
   total_score: number;
   created_at: string;
+  [key: string]: any; // Add index signature to allow string indexing
 }
 
 const OfferList: React.FC = () => {
@@ -44,22 +45,63 @@ const OfferList: React.FC = () => {
       
       const response = await offerApi.getAll(params);
       
+      // Handle different response formats
+      let offersData: Offer[] = [];
+      
+      if (response) {
+        // Check if response is an array
+        if (Array.isArray(response)) {
+          offersData = response;
+        } 
+        // Check if response has a results property that is an array
+        else if (response.results && Array.isArray(response.results)) {
+          offersData = response.results;
+        } 
+        // If it's some other object structure, try to convert to array
+        else if (typeof response === 'object') {
+          offersData = Object.values(response);
+        }
+      }
+      
       // Sort the offers
-      let sortedOffers = [...response];
+      const sortedOffers = [...offersData];
+      
       if (sortBy.startsWith('-')) {
         const field = sortBy.slice(1);
         sortedOffers.sort((a, b) => {
+          // Handle the total_score case
           if (field === 'total_score') {
-            return (b[field] || 0) - (a[field] || 0);
+            const aValue = a.total_score || 0;
+            const bValue = b.total_score || 0;
+            return bValue - aValue;
           }
-          return new Date(b[field]).getTime() - new Date(a[field]).getTime();
+          
+          // Handle date fields
+          if (field === 'created_at' || field === 'submitted_at') {
+            const aDate = a[field] ? new Date(a[field]).getTime() : 0;
+            const bDate = b[field] ? new Date(b[field]).getTime() : 0;
+            return bDate - aDate;
+          }
+          
+          return 0;
         });
       } else {
         sortedOffers.sort((a, b) => {
+          // Handle the total_score case
           if (sortBy === 'total_score') {
-            return (a[sortBy] || 0) - (b[sortBy] || 0);
+            const aValue = a.total_score || 0;
+            const bValue = b.total_score || 0;
+            return aValue - bValue;
           }
-          return new Date(a[sortBy]).getTime() - new Date(b[sortBy]).getTime();
+          
+          // Handle date fields
+          if (sortBy === 'created_at' || sortBy === 'submitted_at') {
+            const aDate = a[sortBy] ? new Date(a[sortBy]).getTime() : 0;
+            const bDate = b[sortBy] ? new Date(b[sortBy]).getTime() : 0;
+            return aDate - bDate;
+          }
+          
+          return 0;
         });
       }
       
@@ -214,10 +256,10 @@ const OfferList: React.FC = () => {
                 <tr key={offer.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {offer.tender?.reference_number} - {offer.tender_title}
+                      {offer.tender?.reference_number} - {offer.tender_title || offer.tender?.title}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {offer.tender?.title.substring(0, 50)}...
+                      {offer.tender?.title?.substring(0, 50) || ""}...
                     </div>
                   </td>
                   {user?.role !== 'vendor' && (

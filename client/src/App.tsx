@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { VendorProvider } from './contexts/VendorContext'; // Import the VendorProvider
+import { VendorProvider } from './contexts/VendorContext';
 
 // Import pages
 import Login from './pages/auth/Login';
@@ -18,6 +18,7 @@ import TenderSearch from './pages/tenders/TenderSearch';
 
 // Import offer pages
 import OfferList from './pages/offers/OfferList';
+import OfferCreate from './pages/offers/OfferCreate'; // Import the new component
 import Home from './pages/Home';
 
 // Import vendor pages
@@ -52,7 +53,7 @@ const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
-        <VendorProvider> {/* Wrap with VendorProvider */}
+        <VendorProvider>
           <Routes>
             {/* Auth Routes */}
             <Route path="/login" element={<Login />} />
@@ -116,6 +117,15 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <OfferList />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Add the new OfferCreate route */}
+            <Route 
+              path="/offers/create" 
+              element={
+                <ProtectedRoute>
+                  <OfferCreate />
                 </ProtectedRoute>
               } 
             />
