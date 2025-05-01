@@ -1,5 +1,5 @@
 // client/src/components/reports/ReportGeneratorModal.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { tenderApi } from '../../api/api';
 
 interface Tender {
@@ -43,6 +43,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Report types
   const reportTypes = [
@@ -55,6 +56,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchTenders();
+      document.body.style.overflow = 'hidden';
       
       // Add escape key handler
       const handleEscape = (event: KeyboardEvent) => {
@@ -66,6 +68,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
       document.addEventListener('keydown', handleEscape);
       return () => {
         document.removeEventListener('keydown', handleEscape);
+        document.body.style.overflow = 'unset';
       };
     }
   }, [isOpen, onClose]);
@@ -73,7 +76,6 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
   const fetchTenders = async () => {
     try {
       setLoading(true);
-      // Use tenderApi which properly handles authentication
       const response = await tenderApi.getAll({ status: 'closed,awarded' });
 
       // Handle different response formats
@@ -155,21 +157,22 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed z-10 inset-0 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        {/* Background overlay - Make it clickable to close */}
+        {/* Background overlay */}
         <div 
-          className="fixed inset-0 transition-opacity" 
+          className="fixed inset-0 bg-transparent transition-opacity" 
           aria-hidden="true"
           onClick={onClose}
-        >
-          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-        </div>
+        ></div>
 
-        {/* Modal panel */}
+        {/* Center modal */}
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        {/* Modal panel */}
         <div 
-          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+          ref={modalRef}
+          className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full z-50"
           role="dialog" 
           aria-modal="true" 
           aria-labelledby="modal-headline"
