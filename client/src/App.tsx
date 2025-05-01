@@ -2,6 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { VendorProvider } from './contexts/VendorContext'; // Import the VendorProvider
 
 // Import pages
 import Login from './pages/auth/Login';
@@ -18,6 +19,12 @@ import TenderSearch from './pages/tenders/TenderSearch';
 // Import offer pages
 import OfferList from './pages/offers/OfferList';
 import Home from './pages/Home';
+
+// Import vendor pages
+import VendorList from './pages/vendors/VendorList';
+import VendorDetail from './pages/vendors/VendorDetail';
+import VendorCreate from './pages/vendors/VendorCreate';
+import VendorEdit from './pages/vendors/VendorEdit';
 
 // Define a protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -45,98 +52,134 @@ const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* Protected Routes */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
+        <VendorProvider> {/* Wrap with VendorProvider */}
+          <Routes>
+            {/* Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            {/* Protected Routes */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
 
-          {/* Tender Routes */}
-          <Route 
-            path="/tenders" 
-            element={
-              <ProtectedRoute>
-                <TenderList />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/tenders/search" 
-            element={
-              <ProtectedRoute>
-                <TenderSearch />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/tenders/create" 
-            element={
-              <ProtectedRoute>
-                <TenderCreate />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/tenders/:id" 
-            element={
-              <ProtectedRoute>
-                <TenderDetail />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/tenders/:id/edit" 
-            element={
-              <ProtectedRoute>
-                <TenderEdit />
-              </ProtectedRoute>
-            } 
-          />
+            {/* Tender Routes */}
+            <Route 
+              path="/tenders" 
+              element={
+                <ProtectedRoute>
+                  <TenderList />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tenders/search" 
+              element={
+                <ProtectedRoute>
+                  <TenderSearch />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tenders/create" 
+              element={
+                <ProtectedRoute>
+                  <TenderCreate />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tenders/:id" 
+              element={
+                <ProtectedRoute>
+                  <TenderDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tenders/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <TenderEdit />
+                </ProtectedRoute>
+              } 
+            />
 
-          {/* Offer Routes */}
-          <Route 
-            path="/offers" 
-            element={
-              <ProtectedRoute>
-                <OfferList />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Redirect root to dashboard or login */}
-          <Route 
-            path="/" 
-            element={
-              <Home/>
-            } 
-          />
+            {/* Offer Routes */}
+            <Route 
+              path="/offers" 
+              element={
+                <ProtectedRoute>
+                  <OfferList />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Vendor Routes */}
+            <Route 
+              path="/vendors" 
+              element={
+                <ProtectedRoute>
+                  <VendorList />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/vendors/create" 
+              element={
+                <ProtectedRoute>
+                  <VendorCreate />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/vendors/:id" 
+              element={
+                <ProtectedRoute>
+                  <VendorDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/vendors/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <VendorEdit />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Redirect root to dashboard or login */}
+            <Route 
+              path="/" 
+              element={
+                <Home/>
+              } 
+            />
 
-          {/* 404 Route */}
-          <Route 
-            path="*" 
-            element={
-              <div className="flex flex-col items-center justify-center h-screen">
-                <h1 className="text-4xl font-bold mb-4">404 - Page Not Found</h1>
-                <p className="mb-8">The page you are looking for doesn't exist.</p>
-                <a 
-                  href="/"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Go to Home
-                </a>
-              </div>
-            } 
-          />
-        </Routes>
+            {/* 404 Route */}
+            <Route 
+              path="*" 
+              element={
+                <div className="flex flex-col items-center justify-center h-screen">
+                  <h1 className="text-4xl font-bold mb-4">404 - Page Not Found</h1>
+                  <p className="mb-8">The page you are looking for doesn't exist.</p>
+                  <a 
+                    href="/"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Go to Home
+                  </a>
+                </div>
+              } 
+            />
+          </Routes>
+        </VendorProvider>
       </AuthProvider>
     </Router>
   );

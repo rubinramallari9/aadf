@@ -9,6 +9,28 @@ export interface LoginData {
   password: string;
 }
 
+
+export interface UserData {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: string;
+}
+
+export interface VendorCompanyData {
+  id: number;
+  name: string;
+  registration_number?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  created_at: string;
+  updated_at: string;
+  users?: UserData[];
+}
+
 export interface RegisterData {
   username: string;
   email: string;
@@ -121,6 +143,179 @@ export const authApi = {
     return response.json();
   },
 };
+
+
+// Vendor API
+export const vendorApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params as Record<string, string>).toString();
+    const url = queryString ? `${API_ENDPOINTS.VENDORS.BASE}?${queryString}` : API_ENDPOINTS.VENDORS.BASE;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get vendors');
+    }
+    
+    return response.json();
+  },
+  
+  getById: async (id: number) => {
+    const response = await fetch(API_ENDPOINTS.VENDORS.DETAIL(id), {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get vendor');
+    }
+    
+    return response.json();
+  },
+  
+  create: async (data: any) => {
+    const response = await fetch(API_ENDPOINTS.VENDORS.BASE, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create vendor');
+    }
+    
+    return response.json();
+  },
+  
+  update: async (id: number, data: any) => {
+    const response = await fetch(API_ENDPOINTS.VENDORS.DETAIL(id), {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update vendor');
+    }
+    
+    return response.json();
+  },
+  
+  delete: async (id: number) => {
+    const response = await fetch(API_ENDPOINTS.VENDORS.DETAIL(id), {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete vendor');
+    }
+    
+    return response.ok;
+  },
+  
+  assignUser: async (id: number, userId: number) => {
+    const response = await fetch(API_ENDPOINTS.VENDORS.ASSIGN_USER(id), {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ user_id: userId }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to assign user to vendor');
+    }
+    
+    return response.json();
+  },
+  
+  removeUser: async (id: number, userId: number) => {
+    const response = await fetch(API_ENDPOINTS.VENDORS.REMOVE_USER(id), {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ user_id: userId }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to remove user from vendor');
+    }
+    
+    return response.json();
+  },
+  
+  getStatistics: async (id: number) => {
+    const response = await fetch(API_ENDPOINTS.VENDORS.STATISTICS(id), {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get vendor statistics');
+    }
+    
+    return response.json();
+  },
+};
+
+// Users API
+export const usersApi = {
+  getAll: async (params = {}) => {
+    const queryString = new URLSearchParams(params as Record<string, string>).toString();
+    const url = queryString ? `${API_ENDPOINTS.USERS.BASE}?${queryString}` : API_ENDPOINTS.USERS.BASE;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get users');
+    }
+    
+    return response.json();
+  },
+  
+  getById: async (id: number) => {
+    const response = await fetch(API_ENDPOINTS.USERS.DETAIL(id), {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get user');
+    }
+    
+    return response.json();
+  },
+  
+  resetPassword: async (id: number, newPassword: string) => {
+    const response = await fetch(API_ENDPOINTS.USERS.RESET_PASSWORD(id), {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ new_password: newPassword }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to reset password');
+    }
+    
+    return response.json();
+  },
+};
+
 
 // Tender API
 export const tenderApi = {
@@ -630,4 +825,6 @@ export default {
   documents: documentApi,
   dashboard: dashboardApi,
   notifications: notificationApi,
+  vendor: vendorApi,  // Add vendor API
+  users: usersApi,  
 };
