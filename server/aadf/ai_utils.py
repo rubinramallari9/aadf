@@ -3,6 +3,16 @@
 import logging
 import re
 import os
+import ssl
+
+# Fix for SSL certificate verification issues
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Avg, F

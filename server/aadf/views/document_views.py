@@ -1,15 +1,14 @@
-# server/aadf/views/document_views.py
+from django.http import FileResponse, Http404
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.shortcuts import get_object_or_404
+from django.conf import settings
 
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.http import FileResponse, Http404
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-from django.shortcuts import get_object_or_404
-from django.conf import settings
 
 import os
 import uuid
@@ -17,7 +16,8 @@ import logging
 import json
 
 from ..models import (
-    User, Tender, TenderDocument, Offer, OfferDocument, Report, AuditLog
+    User, Tender, TenderDocument, Offer, OfferDocument, Report, AuditLog,
+    DocumentVersion  # Import DocumentVersion from models now
 )
 from ..serializers import TenderDocumentSerializer, OfferDocumentSerializer
 from ..permissions import (
@@ -26,37 +26,8 @@ from ..permissions import (
 from ..utils import (
     validate_file_extension, validate_file_size, verify_document_signature
 )
-from server.aadf import models
 
 logger = logging.getLogger('aadf')
-
-
-# Add this model for document versioning
-class DocumentVersion(models.Model):
-    """Document version history"""
-    # Common fields
-    original_filename = models.CharField(max_length=255)
-    filename = models.CharField(max_length=255)
-    file_path = models.TextField()
-    file_size = models.IntegerField(null=True, blank=True)
-    mime_type = models.CharField(max_length=100, blank=True, null=True)
-    version_number = models.PositiveIntegerField()
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    # For identifying the parent document
-    document_type = models.CharField(max_length=50)  # 'tender' or 'offer'
-    document_id = models.IntegerField()
-    
-    # Change description
-    change_description = models.TextField(blank=True, null=True)
-    
-    class Meta:
-        db_table = 'document_versions'
-        ordering = ['-version_number']
-        
-    def __str__(self):
-        return f"v{self.version_number} - {self.original_filename}"
 
 
 class TenderDocumentViewSet(viewsets.ModelViewSet):

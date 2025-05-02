@@ -9,6 +9,9 @@ from django.core.files.base import ContentFile
 from django.db.models import Q, Sum, Avg, Count, Max, Min, F
 from django.utils import timezone
 from django.conf import settings
+from reportlab.graphics.shapes import Circle, Drawing
+from reportlab.lib import colors
+from ..models import TenderDocument, OfferDocument
 
 import logging
 import os
@@ -1805,7 +1808,7 @@ class ReportViewSet(viewsets.ModelViewSet):
                         lc.width = 400
                         lc.data = [scores]
                         lc.joinedLines = 1
-                        lc.lines[0].symbol = makeMarker('Circle')
+                        lc.lines[0].symbol = Circle(r=2, fillColor=colors.blue)
                         lc.lines[0].strokeWidth = 2
                         lc.lines[0].strokeColor = colors.blue
                         
