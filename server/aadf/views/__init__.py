@@ -13,3 +13,4 @@ from .report_views import ReportViewSet
 from .notification_views import NotificationViewSet
 from .audit_views import AuditLogViewSet
 from .dashboard_views import DashboardView, TenderSearchView, UserManagementView
+from .vendor_views import VendorCompanyViewSet, VendorUserViewSet
