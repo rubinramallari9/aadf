@@ -7,6 +7,8 @@ from django.db.models import Q, Count, Sum, Avg, Max, Min, F, Value
 from django.db.models.functions import TruncMonth, TruncYear
 from django.utils import timezone
 from datetime import datetime, timedelta
+from rest_framework.decorators import action
+
 
 import logging
 
