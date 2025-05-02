@@ -5,7 +5,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     TenderViewSet, OfferViewSet, TenderDocumentViewSet, OfferDocumentViewSet,
     EvaluationViewSet, LoginView, LogoutView, RegisterView, ChangePasswordView,
-    DocumentDownloadView, VendorCompanyViewSet, EvaluationCriteriaViewSet,
+    DocumentDownloadView, VendorCompanyViewSet, VendorUserViewSet, EvaluationCriteriaViewSet,
     ApprovalViewSet, ReportViewSet, NotificationViewSet, AuditLogViewSet,
     UserProfileView, DashboardView, TenderSearchView, UserManagementView
 )
@@ -17,6 +17,7 @@ router.register(r'tender-documents', TenderDocumentViewSet)
 router.register(r'offer-documents', OfferDocumentViewSet)
 router.register(r'evaluations', EvaluationViewSet)
 router.register(r'vendor-companies', VendorCompanyViewSet)
+router.register(r'vendor-users', VendorUserViewSet)
 router.register(r'evaluation-criteria', EvaluationCriteriaViewSet)
 router.register(r'approvals', ApprovalViewSet)
 router.register(r'reports', ReportViewSet)

@@ -27,23 +27,82 @@ class UserSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class VendorUserSerializer(serializers.ModelSerializer):
+    """Serializer for VendorUser model (relationship)"""
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    company_id = serializers.IntegerField(source='company.id', read_only=True)
+    company_name = serializers.CharField(source='company.name', read_only=True)
+
+    class Meta:
+        model = VendorUser
+        fields = ['id', 'user_id', 'username', 'company_id', 'company_name']
+        read_only_fields = ['id']
+
+
 class VendorCompanySerializer(serializers.ModelSerializer):
     """Serializer for VendorCompany model"""
     users = UserSerializer(many=True, read_only=True)
     user_ids = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, write_only=True,
                                                   required=False)
+    vendor_users = VendorUserSerializer(source='vendoruser_set', many=True, read_only=True)
+    offers_count = serializers.SerializerMethodField()
+    active_tenders_count = serializers.SerializerMethodField()
 
     class Meta:
         model = VendorCompany
         fields = ['id', 'name', 'registration_number', 'address', 'phone', 'email',
-                  'users', 'user_ids', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+                  'users', 'user_ids', 'vendor_users', 'offers_count', 'active_tenders_count',
+                  'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'offers_count', 'active_tenders_count']
+
+    def get_offers_count(self, obj):
+        return obj.offers.count()
+
+    def get_active_tenders_count(self, obj):
+        return obj.offers.filter(tender__status='published').values('tender').distinct().count()
 
     def create(self, validated_data):
         user_ids = validated_data.pop('user_ids', [])
         company = VendorCompany.objects.create(**validated_data)
-        company.users.set(user_ids)
+        
+        # Assign users to company through VendorUser model
+        for user in user_ids:
+            VendorUser.objects.create(user=user, company=company)
+            
+            # Update user role if needed
+            if user.role != 'vendor':
+                user.role = 'vendor'
+                user.save()
+        
         return company
+
+    def update(self, instance, validated_data):
+        user_ids = validated_data.pop('user_ids', None)
+        
+        # Update company fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # If user_ids is provided, update the company's users
+        if user_ids is not None:
+            # Remove existing relationships
+            if validated_data.get('replace_users', False):
+                VendorUser.objects.filter(company=instance).delete()
+            
+            # Add new users
+            current_users = set(VendorUser.objects.filter(company=instance).values_list('user_id', flat=True))
+            for user in user_ids:
+                if user.id not in current_users:
+                    VendorUser.objects.create(user=user, company=instance)
+                    
+                    # Update user role if needed
+                    if user.role != 'vendor':
+                        user.role = 'vendor'
+                        user.save()
+        
+        return instance
 
 
 class TenderRequirementSerializer(serializers.ModelSerializer):
@@ -100,16 +159,21 @@ class OfferSerializer(serializers.ModelSerializer):
     """Serializer for Offer model"""
     vendor_name = serializers.CharField(source='vendor.name', read_only=True)
     tender_title = serializers.CharField(source='tender.title', read_only=True)
+    tender_reference = serializers.CharField(source='tender.reference_number', read_only=True)
     submitted_by_username = serializers.CharField(source='submitted_by.username', read_only=True)
     documents = OfferDocumentSerializer(many=True, read_only=True)
+    documents_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Offer
-        fields = ['id', 'tender', 'tender_title', 'vendor', 'vendor_name', 'submitted_by',
+        fields = ['id', 'tender', 'tender_title', 'tender_reference', 'vendor', 'vendor_name', 'submitted_by',
                   'submitted_by_username', 'status', 'submitted_at', 'price', 'technical_score',
-                  'financial_score', 'total_score', 'notes', 'documents', 'created_at', 'updated_at']
+                  'financial_score', 'total_score', 'notes', 'documents', 'documents_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'submitted_by', 'submitted_at', 'status', 'technical_score',
-                            'financial_score', 'total_score', 'created_at', 'updated_at']
+                            'financial_score', 'total_score', 'created_at', 'updated_at', 'documents_count']
+
+    def get_documents_count(self, obj):
+        return obj.documents.count()
 
     def validate(self, data):
         """Ensure offer is for an active tender"""
@@ -140,11 +204,12 @@ class EvaluationSerializer(serializers.ModelSerializer):
     """Serializer for Evaluation model"""
     evaluator_username = serializers.CharField(source='evaluator.username', read_only=True)
     criteria_name = serializers.CharField(source='criteria.name', read_only=True)
+    criteria_category = serializers.CharField(source='criteria.category', read_only=True)
 
     class Meta:
         model = Evaluation
         fields = ['id', 'offer', 'evaluator', 'evaluator_username', 'criteria', 'criteria_name',
-                  'score', 'comment', 'created_at', 'updated_at']
+                  'criteria_category', 'score', 'comment', 'created_at', 'updated_at']
         read_only_fields = ['id', 'evaluator', 'created_at', 'updated_at']
 
     def validate_score(self, value):
@@ -230,3 +295,11 @@ class OfferDetailSerializer(OfferSerializer):
 
     class Meta(OfferSerializer.Meta):
         fields = OfferSerializer.Meta.fields + ['evaluations']
+
+
+class VendorCompanyDetailSerializer(VendorCompanySerializer):
+    """Detailed serializer for VendorCompany model with offers and users"""
+    offers = OfferSerializer(many=True, read_only=True)
+    
+    class Meta(VendorCompanySerializer.Meta):
+        fields = VendorCompanySerializer.Meta.fields + ['offers']
