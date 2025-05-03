@@ -1,17 +1,9 @@
 // client/src/contexts/VendorContext.tsx
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/api';
+import { useAuth } from './AuthContext';
 
-// Define types for vendor-related data
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-}
-
+// Define interface for VendorCompany
 interface VendorCompany {
   id: number;
   name: string;
@@ -21,42 +13,114 @@ interface VendorCompany {
   address: string;
   created_at: string;
   updated_at: string;
-  users: User[];
 }
 
+// Define interface for User
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: string;
+}
+
+// Define the context interface
 interface VendorContextType {
   vendors: VendorCompany[];
   loading: boolean;
   error: string | null;
   fetchVendors: () => Promise<void>;
-  getVendorById: (id: number) => Promise<VendorCompany>;
-  createVendor: (data: any) => Promise<VendorCompany>;
-  updateVendor: (id: number, data: any) => Promise<VendorCompany>;
-  assignUser: (vendorId: number, userId: number) => Promise<any>;
-  removeUser: (vendorId: number, userId: number) => Promise<any>;
+  getVendorById: (vendorId: number) => Promise<VendorCompany>;
   fetchVendorStatistics: (vendorId: number) => Promise<any>;
+  assignUser: (vendorId: number, userId: number) => Promise<void>;
+  removeUser: (vendorId: number, userId: number) => Promise<void>;
   users: User[];
   fetchUsers: (role?: string) => Promise<void>;
+  currentVendor: VendorCompany | null;
 }
 
-// Create the context
-const VendorContext = createContext<VendorContextType | undefined>(undefined);
+// Create the context with a default value
+const VendorContext = createContext<VendorContextType>({
+  vendors: [],
+  loading: false,
+  error: null,
+  fetchVendors: async () => {},
+  getVendorById: async () => ({} as VendorCompany),
+  fetchVendorStatistics: async () => ({}),
+  assignUser: async () => {},
+  removeUser: async () => {},
+  users: [],
+  fetchUsers: async () => {},
+  currentVendor: null,
+});
 
-// Create a provider component
-export const VendorProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+// Export the hook to use this context
+export const useVendor = () => useContext(VendorContext);
+
+// Create the provider component
+export const VendorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [vendors, setVendors] = useState<VendorCompany[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentVendor, setCurrentVendor] = useState<VendorCompany | null>(null);
+  const { user } = useAuth();
 
-  // Function to fetch all vendors
+  // Fetch vendors on initial load
+  useEffect(() => {
+    if (user) {
+      fetchVendors();
+      
+      // If user is a vendor, try to load their associated company
+      if (user.role === 'vendor') {
+        fetchCurrentVendor();
+      }
+    }
+  }, [user]);
+
+  // Fetch the current vendor company for the logged-in vendor user
+  const fetchCurrentVendor = async () => {
+    try {
+      setLoading(true);
+      const response = await api.vendor.getAll();
+      
+      // Handle different response structures
+      let vendorsData = [];
+      if (response) {
+        if (Array.isArray(response)) {
+          vendorsData = response;
+        } else if (response.results && Array.isArray(response.results)) {
+          vendorsData = response.results;
+        } else if (typeof response === 'object') {
+          vendorsData = Object.values(response);
+        }
+      }
+      
+      // Find the vendor company that this user belongs to
+      const userVendor = vendorsData.find((vendor: any) => 
+        vendor.users && vendor.users.some((u: any) => u.id === user?.id)
+      );
+      
+      if (userVendor) {
+        setCurrentVendor(userVendor);
+      }
+      
+    } catch (err: any) {
+      console.error('Error fetching current vendor:', err);
+      setError(err.message || 'Failed to load current vendor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch all vendors
   const fetchVendors = async () => {
     try {
       setLoading(true);
-      setError(null);
       const response = await api.vendor.getAll();
       
-      // Handle different response formats
+      // Handle different response structures
       let vendorsData = [];
       if (response) {
         if (Array.isArray(response)) {
@@ -77,126 +141,61 @@ export const VendorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  // Function to get a vendor by ID
-  const getVendorById = async (id: number): Promise<VendorCompany> => {
+  // Get vendor by ID
+  const getVendorById = async (vendorId: number): Promise<VendorCompany> => {
     try {
-      setLoading(true);
-      setError(null);
-      const response = await api.vendor.getById(id);
-      return response;
+      const vendor = await api.vendor.getById(vendorId);
+      return vendor;
     } catch (err: any) {
-      console.error('Error fetching vendor:', err);
-      setError(err.message || 'Failed to load vendor');
-      throw err;
-    } finally {
-      setLoading(false);
+      console.error(`Error fetching vendor ${vendorId}:`, err);
+      throw new Error(err.message || 'Failed to load vendor');
     }
   };
 
-  // Function to create a new vendor
-  const createVendor = async (data: any): Promise<VendorCompany> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await api.vendor.create(data);
-      
-      // Update the vendors list
-      setVendors(prevVendors => [...prevVendors, response]);
-      
-      return response;
-    } catch (err: any) {
-      console.error('Error creating vendor:', err);
-      setError(err.message || 'Failed to create vendor');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Function to update a vendor
-  const updateVendor = async (id: number, data: any): Promise<VendorCompany> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await api.vendor.update(id, data);
-      
-      // Update the vendors list
-      setVendors(prevVendors => 
-        prevVendors.map(vendor => 
-          vendor.id === id ? response : vendor
-        )
-      );
-      
-      return response;
-    } catch (err: any) {
-      console.error('Error updating vendor:', err);
-      setError(err.message || 'Failed to update vendor');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Function to assign a user to a vendor
-  const assignUser = async (vendorId: number, userId: number) => {
-    try {
-      setLoading(true);
-      setError(null);
-      return await api.vendor.assignUser(vendorId, userId);
-    } catch (err: any) {
-      console.error('Error assigning user to vendor:', err);
-      setError(err.message || 'Failed to assign user to vendor');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Function to remove a user from a vendor
-  const removeUser = async (vendorId: number, userId: number) => {
-    try {
-      setLoading(true);
-      setError(null);
-      return await api.vendor.removeUser(vendorId, userId);
-    } catch (err: any) {
-      console.error('Error removing user from vendor:', err);
-      setError(err.message || 'Failed to remove user from vendor');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Function to fetch vendor statistics
+  // Fetch vendor statistics
   const fetchVendorStatistics = async (vendorId: number) => {
     try {
-      setLoading(true);
-      setError(null);
-      return await api.vendor.getStatistics(vendorId);
+      const statistics = await api.vendor.getStatistics(vendorId);
+      return statistics;
     } catch (err: any) {
-      console.error('Error fetching vendor statistics:', err);
-      setError(err.message || 'Failed to fetch vendor statistics');
-      throw err;
-    } finally {
-      setLoading(false);
+      console.error(`Error fetching vendor statistics ${vendorId}:`, err);
+      throw new Error(err.message || 'Failed to load vendor statistics');
     }
   };
 
-  // Function to fetch users with optional role filter
+  // Assign user to vendor
+  const assignUser = async (vendorId: number, userId: number) => {
+    try {
+      await api.vendor.assignUser(vendorId, userId);
+      // Refresh vendors after assignment
+      fetchVendors();
+    } catch (err: any) {
+      console.error('Error assigning user to vendor:', err);
+      throw new Error(err.message || 'Failed to assign user to vendor');
+    }
+  };
+
+  // Remove user from vendor
+  const removeUser = async (vendorId: number, userId: number) => {
+    try {
+      await api.vendor.removeUser(vendorId, userId);
+      // Refresh vendors after removal
+      fetchVendors();
+    } catch (err: any) {
+      console.error('Error removing user from vendor:', err);
+      throw new Error(err.message || 'Failed to remove user from vendor');
+    }
+  };
+
+  // Fetch users
   const fetchUsers = async (role?: string) => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Prepare query parameters
       const params: any = {};
-      if (role) {
-        params.role = role;
-      }
+      if (role) params.role = role;
       
       const response = await api.users.getAll(params);
       
-      // Handle different response formats
+      // Handle different response structures
       let usersData = [];
       if (response) {
         if (Array.isArray(response)) {
@@ -212,39 +211,29 @@ export const VendorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } catch (err: any) {
       console.error('Error fetching users:', err);
       setError(err.message || 'Failed to load users');
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Provide the context value
-  const contextValue: VendorContextType = {
+  // Create the context value
+  const value = {
     vendors,
     loading,
     error,
     fetchVendors,
     getVendorById,
-    createVendor,
-    updateVendor,
+    fetchVendorStatistics,
     assignUser,
     removeUser,
-    fetchVendorStatistics,
     users,
-    fetchUsers
+    fetchUsers,
+    currentVendor,
   };
 
   return (
-    <VendorContext.Provider value={contextValue}>
+    <VendorContext.Provider value={value}>
       {children}
     </VendorContext.Provider>
   );
 };
 
-// Create a custom hook to use the vendor context
-export const useVendor = () => {
-  const context = useContext(VendorContext);
-  if (context === undefined) {
-    throw new Error('useVendor must be used within a VendorProvider');
-  }
-  return context;
-};
+export default VendorContext;
