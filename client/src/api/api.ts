@@ -4,12 +4,13 @@
 import { API_ENDPOINTS, getAuthHeaders, getMultipartHeaders } from './config';
 import { evaluationApi } from './evaluationApi';
 import { reportsApi } from './reportsApi';
+import { usersApi } from './usersApi';
+
 // Types
 export interface LoginData {
   username: string;
   password: string;
 }
-
 
 export interface UserData {
   id: number;
@@ -283,56 +284,6 @@ export const vendorApi = {
     return response.json();
   },
 };
-
-// Users API
-export const usersApi = {
-  getAll: async (params = {}) => {
-    const queryString = new URLSearchParams(params as Record<string, string>).toString();
-    const url = queryString ? `${API_ENDPOINTS.USERS.BASE}?${queryString}` : API_ENDPOINTS.USERS.BASE;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to get users');
-    }
-    
-    return response.json();
-  },
-  
-  getById: async (id: number) => {
-    const response = await fetch(API_ENDPOINTS.USERS.DETAIL(id), {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to get user');
-    }
-    
-    return response.json();
-  },
-  
-  resetPassword: async (id: number, newPassword: string) => {
-    const response = await fetch(API_ENDPOINTS.USERS.RESET_PASSWORD(id), {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ new_password: newPassword }),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to reset password');
-    }
-    
-    return response.json();
-  },
-};
-
 
 // Tender API
 export const tenderApi = {
@@ -844,10 +795,8 @@ export default {
   notifications: notificationApi,
   vendor: vendorApi,
   users: usersApi,
-  evaluations: evaluationApi, // Add this
-  reports: {
-    ...reportsApi,
-  },
+  evaluations: evaluationApi, 
+  reports: reportsApi,
 };
 
-export { evaluationApi };
+export { evaluationApi, usersApi };

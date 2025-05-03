@@ -49,6 +49,11 @@ const AdminDashboard: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [resetPasswordMode, setResetPasswordMode] = useState<boolean>(false);
   const [newPassword, setNewPassword] = useState<string>('');
+  
+  // States for delete account confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<boolean>(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -98,9 +103,7 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // client/src/pages/AdminDashboard.tsx
-
-const handleSubmitUserForm = async (e: React.FormEvent) => {
+  const handleSubmitUserForm = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (isEditMode && selectedUserId) {
@@ -186,6 +189,44 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
     // Clear any error message
     setError(null);
   };
+  
+  // New function to open delete confirmation modal
+  const openDeleteModal = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+  
+  // New function to close delete confirmation modal
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+    setDeletingUser(false);
+  };
+  
+  // New function to handle account deletion
+  const handleDeleteAccount = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      setDeletingUser(true);
+      
+      // Use the deactivate method from usersApi
+      await usersApi.deactivate(userToDelete.id);
+      
+      // Close modal and refresh user list
+      closeDeleteModal();
+      fetchUsers();
+      
+      // Show success message
+      setError(`${userToDelete.username}'s account has been deactivated successfully.`);
+      setTimeout(() => setError(null), 5000); // Clear message after 5 seconds
+    } catch (err: any) {
+      console.error('Error deleting user:', err);
+      setError(err.message || 'Failed to delete user');
+    } finally {
+      setDeletingUser(false);
+    }
+  };
 
   // Only allow admin to access this page
   if (user?.role !== 'admin') {
@@ -220,7 +261,7 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
       </div>
 
       {error && (
-        <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <div className={`mb-4 ${error.includes('deactivated successfully') ? 'bg-green-100 border border-green-400 text-green-700' : 'bg-red-100 border border-red-400 text-red-700'} px-4 py-3 rounded relative`} role="alert">
           <span className="block sm:inline">{error}</span>
         </div>
       )}
@@ -383,49 +424,57 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id}>
+              {users.map((userData) => (
+                <tr key={userData.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {user.username}
+                    {userData.username}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.first_name} {user.last_name}
+                    {userData.first_name} {userData.last_name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.email}
+                    {userData.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                      user.role === 'staff' ? 'bg-blue-100 text-blue-800' :
-                      user.role === 'evaluator' ? 'bg-yellow-100 text-yellow-800' :
+                      userData.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                      userData.role === 'staff' ? 'bg-blue-100 text-blue-800' :
+                      userData.role === 'evaluator' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-green-100 text-green-800'
                     }`}>
-                      {user.role}
+                      {userData.role}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      userData.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
+                      {userData.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.date_joined).toLocaleDateString()}
+                    {new Date(userData.date_joined).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
-                      onClick={() => openEditUserModal(user)}
+                      onClick={() => openEditUserModal(userData)}
                       className="text-blue-600 hover:text-blue-900 mr-3"
                     >
                       Edit
                     </button>
                     <button
-                      onClick={() => openResetPasswordModal(user.id)}
-                      className="text-green-600 hover:text-green-900"
+                      onClick={() => openResetPasswordModal(userData.id)}
+                      className="text-green-600 hover:text-green-900 mr-3"
                     >
                       Reset Password
+                    </button>
+                    <button
+                      onClick={() => openDeleteModal(userData)}
+                      className="text-red-600 hover:text-red-900"
+                      disabled={userData.id === user?.id}
+                      title={userData.id === user?.id ? "You cannot delete your own account" : "Delete account"}
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -514,18 +563,18 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
         </div>
       </div>
 
-      {/* User Modal - FIXED VERSION */}
+      {/* User Modal */}
       {showUserModal && (
         <div className="fixed z-50 inset-0 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen p-4">
-            {/* Background overlay - Make sure the onClick is directly on this element */}
+            {/* Background overlay */}
             <div 
               className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
               onClick={closeUserModal}
               aria-hidden="true"
             ></div>
             
-            {/* Modal panel - Stop propagation to prevent clicks from closing the modal */}
+            {/* Modal panel */}
             <div 
               className="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all max-w-lg w-full z-50 relative"
               onClick={(e) => e.stopPropagation()}
@@ -576,6 +625,7 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
                       </form>
                     ) : (
                       <form onSubmit={handleSubmitUserForm} className="mt-4">
+                        {/* Username and Email */}
                         <div className="grid grid-cols-2 gap-4">
                           <div className="mb-4">
                             <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>
@@ -604,6 +654,7 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
                           </div>
                         </div>
                         
+                        {/* Password - only for new users */}
                         {!isEditMode && (
                           <div className="mb-4">
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
@@ -620,6 +671,7 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
                           </div>
                         )}
                         
+                        {/* First Name and Last Name */}
                         <div className="grid grid-cols-2 gap-4">
                           <div className="mb-4">
                             <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">First Name</label>
@@ -646,6 +698,7 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
                           </div>
                         </div>
                         
+                        {/* Role Selection */}
                         <div className="mb-4">
                           <label htmlFor="role" className="block text-sm font-medium text-gray-700">Role</label>
                           <select
@@ -664,6 +717,7 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
                           <p className="mt-1 text-xs text-gray-500">Note: Vendor users should be created through the vendor registration process.</p>
                         </div>
                         
+                        {/* Active Status Checkbox */}
                         <div className="mb-4 flex items-center">
                           <input
                             type="checkbox"
@@ -678,6 +732,7 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
                           </label>
                         </div>
                         
+                        {/* Form Buttons */}
                         <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                           <button
                             type="submit"
@@ -697,6 +752,65 @@ const handleSubmitUserForm = async (e: React.FormEvent) => {
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed z-50 inset-0 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            {/* Background overlay */}
+            <div 
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={closeDeleteModal}
+              aria-hidden="true"
+            ></div>
+            
+            {/* Modal panel */}
+            <div 
+              className="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all max-w-lg w-full z-50 relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <span className="material-icons text-red-600">warning</span>
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                      Deactivate Account
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        Are you sure you want to deactivate {userToDelete?.username}'s account? This action will immediately revoke their access to the system. 
+                        The account will be marked as inactive, but the user data will be preserved.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  disabled={deletingUser}
+                  onClick={handleDeleteAccount}
+                  className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm ${
+                    deletingUser ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {deletingUser ? 'Deactivating...' : 'Deactivate'}
+                </button>
+                <button
+                  type="button"
+                  disabled={deletingUser}
+                  onClick={closeDeleteModal}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
