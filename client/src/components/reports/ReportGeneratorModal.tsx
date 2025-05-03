@@ -76,20 +76,45 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
   const fetchTenders = async () => {
     try {
       setLoading(true);
-      const response = await tenderApi.getAll({ status: 'closed,awarded' });
-
+      setError(null);
+      
+      // Try different API calls to find the working one
+      let response = null;
+      
+      // First try with specific status
+      try {
+        response = await tenderApi.getAll({ status: 'closed,awarded' });
+      } catch (err) {
+        console.log('Initial API call failed:', err);
+      }
+      
+      // If that fails, try without filters
+      if (!response) {
+        try {
+          response = await tenderApi.getAll();
+        } catch (err) {
+          console.log('Second API call failed:', err);
+        }
+      }
+      
       // Handle different response formats
       let tendersData: Tender[] = [];
       if (response) {
         if (Array.isArray(response)) {
           tendersData = response;
+        } else if (response.data && Array.isArray(response.data)) {
+          tendersData = response.data;
         } else if (response.results && Array.isArray(response.results)) {
           tendersData = response.results;
         } else if (typeof response === 'object') {
-          tendersData = Object.values(response) as Tender[];
+          // Try to extract tenders from any object format
+          tendersData = Object.values(response).filter(item => 
+            item && typeof item === 'object' && 'id' in item && 'reference_number' in item
+          ) as Tender[];
         }
       }
       
+      console.log('Fetched tenders:', tendersData);
       setTenders(tendersData);
       
       // Set the first tender as default if any exist
@@ -101,7 +126,19 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
       }
     } catch (err: any) {
       console.error('Error fetching tenders:', err);
-      setError(err.message || 'Failed to load tenders');
+      
+      // Be more specific about the error
+      if (err.response?.status === 401) {
+        setError('Please login to access tenders');
+      } else if (err.response?.status === 404) {
+        setError('Tenders endpoint not found');
+      } else if (err.response?.status === 403) {
+        setError('You do not have permission to access tenders');
+      } else if (err.message) {
+        setError(`Error: ${err.message}`);
+      } else {
+        setError('Failed to load tenders. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -222,6 +259,11 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
                             </option>
                           ))}
                         </select>
+                        {tenders.length === 0 && !loading && (
+                          <p className="mt-1 text-sm text-gray-500">
+                            No tenders available. Only closed or awarded tenders can be selected for reports.
+                          </p>
+                        )}
                       </div>
                       
                       {/* Report Type */}
