@@ -1,4 +1,4 @@
-// client/src/pages/auth/Register.tsx
+// Updated Register.tsx with evaluator role option
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -231,9 +231,12 @@ const Register: React.FC = () => {
             onChange={(e) => setRole(e.target.value)}
           >
             <option value="vendor">Vendor</option>
+            <option value="evaluator">Evaluator</option>
           </select>
           <p className="mt-1 text-xs text-gray-500">
-            Other account types require administrator approval.
+            {role === 'evaluator' 
+              ? 'Evaluator accounts require approval before you can start evaluating tenders.' 
+              : 'Other account types (staff, admin) require administrator approval.'}
           </p>
         </div>
       </div>
@@ -356,6 +359,7 @@ const Register: React.FC = () => {
       <h3 className="mt-3 text-lg font-medium text-gray-900">Registration successful!</h3>
       <p className="mt-2 text-sm text-gray-500">
         Your account has been created successfully. You will be redirected to the dashboard shortly.
+        {role === 'evaluator' && ' Your account will need approval before you can evaluate tenders.'}
       </p>
       <div className="mt-5">
         <button

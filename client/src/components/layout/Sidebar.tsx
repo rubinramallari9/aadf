@@ -1,4 +1,4 @@
-// Updated Sidebar.tsx with ability to be toggled on all screen sizes
+// client/src/components/layout/Sidebar.tsx
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,44 +8,61 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+// Define NavItem interface to include a key property
+interface NavItem {
+  name: string;
+  path: string;
+  icon: string;
+  key?: string; // Optional unique key property
+}
+
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
 
   // Function to get navigation items based on user role
-  const getNavItems = () => {
+  const getNavItems = (): NavItem[] => {
     if (!user) return [];
 
-    const navItems = [
-      { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
-      { name: 'Tenders', path: '/tenders', icon: 'business_center' },
+    const navItems: NavItem[] = [
+      { name: 'Dashboard', path: '/dashboard', icon: 'dashboard', key: 'nav-dashboard' },
+      { name: 'Tenders', path: '/tenders', icon: 'business_center', key: 'nav-tenders' },
     ];
+
+    // Add Admin Dashboard link only for admin users, with a unique key
+    if (user.role === 'admin') {
+      navItems.unshift({ 
+        name: 'Admin Dashboard', 
+        path: '/admin', 
+        icon: 'admin_panel_settings',
+        key: 'nav-admin-dashboard'  // Unique key for admin dashboard
+      });
+    }
 
     if (user.role === 'admin' || user.role === 'staff') {
       navItems.push(
-        { name: 'Create Tender', path: '/tenders/create', icon: 'add_circle' },
-        { name: 'Vendors', path: '/vendors', icon: 'store' },
-        { name: 'Reports', path: '/reports', icon: 'assessment' }
+        { name: 'Create Tender', path: '/tenders/create', icon: 'add_circle', key: 'nav-create-tender' },
+        { name: 'Vendors', path: '/vendors', icon: 'store', key: 'nav-vendors' },
+        { name: 'Reports', path: '/reports', icon: 'assessment', key: 'nav-reports' }
       );
     }
 
     if (user.role === 'admin') {
-      navItems.push({ name: 'Users', path: '/users', icon: 'people' });
+      navItems.push({ name: 'Users', path: '/users', icon: 'people', key: 'nav-users' });
     }
 
     if (user.role === 'vendor') {
-      navItems.push({ name: 'My Offers', path: '/offers', icon: 'local_offer' });
+      navItems.push({ name: 'My Offers', path: '/offers', icon: 'local_offer', key: 'nav-offers' });
     }
 
     if (user.role === 'evaluator') {
-      navItems.push({ name: 'Evaluations', path: '/evaluations', icon: 'grade' });
+      navItems.push({ name: 'Evaluations', path: '/evaluations', icon: 'grade', key: 'nav-evaluations' });
     }
 
     return navItems;
   };
 
   // Sidebar positioning and visibility
-  // Using absolute positioning instead of fixed for more flexibility
   const sidebarClasses = `
     absolute md:absolute inset-y-0 left-0 z-30 w-64 bg-gradient-to-b from-blue-800 to-blue-600 
     transform transition-transform duration-300 ease-in-out h-full
@@ -68,9 +85,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="flex items-center justify-between h-16 px-6 bg-blue-900">
           <Link to="/dashboard" className="flex items-center">
             <img src="/src/assets/aadf-logo-new.svg" alt="AADF Logo" className="h-8 w-auto mr-2 filter brightness-0 invert" />
-           
           </Link>
-         
+          <button 
+            onClick={onClose}
+            className="text-white md:hidden"
+          >
+            <span className="material-icons">close</span>
+          </button>
         </div>
 
         {/* Navigation */}
@@ -78,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="space-y-1">
             {getNavItems().map((item) => (
               <Link
-                key={item.path}
+                key={item.key || `nav-item-${item.path}`} // Use the unique key or generate one from the path
                 to={item.path}
                 className={`
                   group flex items-center px-3 py-2 text-base font-medium rounded-md 

@@ -2,6 +2,20 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import UserManager
+
+class CustomUserManager(UserManager):
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('role', 'admin')  # Set role to admin
+        
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+            
+        return self._create_user(username, email, password, **extra_fields)
 
 
 class User(AbstractUser):
@@ -32,6 +46,8 @@ class User(AbstractUser):
         related_name='aadf_user_set',
         related_query_name='aadf_user',
     )
+
+    objects = CustomUserManager()  # Use the custom manager
 
     class Meta:
         db_table = 'users'

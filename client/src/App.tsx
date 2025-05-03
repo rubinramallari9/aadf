@@ -35,6 +35,7 @@ import EvaluationList from './pages/evaluations/EvaluationList';
 import EvaluationSummary from './pages/evaluations/EvaluationSummary';
 import OfferEvaluation from './pages/evaluations/OfferEvaluation';
 import EvaluatorPerformance from './pages/evaluations/EvaluatorPerformance';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Define a protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -138,6 +139,15 @@ const App: React.FC = () => {
               </ProtectedRoute>
             } 
           />
+          <Route 
+  path="/admin" 
+  element={
+    <ProtectedRoute>
+      <AdminDashboard />
+    </ProtectedRoute>
+  } 
+/>
+
 
             {/* Offer Routes */}
             <Route 
