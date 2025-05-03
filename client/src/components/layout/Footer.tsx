@@ -1,6 +1,7 @@
-// client/src/components/layout/Footer.tsx
+// Fixed Footer.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
+import aadfLogo from '../../assets/aadf-logo-new.svg'; // Import logo properly
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -18,7 +19,7 @@ const Footer: React.FC = () => {
             </p>
             <div className="flex items-center mt-4">
               <img
-                src="/src/assets/aadf-logo-new.svg"
+                src={aadfLogo}
                 alt="AADF Logo"
                 className="h-8 w-auto filter invert"
               />

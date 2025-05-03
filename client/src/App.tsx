@@ -29,6 +29,13 @@ import VendorEdit from './pages/vendors/VendorEdit';
 import Notifications from './pages/Notifications';
 import Reports from './pages/Reports';
 
+// Import evaluation pages
+import EvaluatorDashboard from './pages/evaluations/EvaluatorDashboard';
+import EvaluationList from './pages/evaluations/EvaluationList';
+import EvaluationSummary from './pages/evaluations/EvaluationSummary';
+import OfferEvaluation from './pages/evaluations/OfferEvaluation';
+import EvaluatorPerformance from './pages/evaluations/EvaluatorPerformance';
+
 // Define a protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -184,6 +191,54 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               } 
             />
+
+
+{/* Evaluator Dashboard Route */}
+<Route 
+  path="/evaluator/dashboard" 
+  element={
+    <ProtectedRoute>
+      <EvaluatorDashboard />
+    </ProtectedRoute>
+  } 
+/>
+
+{/* Evaluation Routes */}
+<Route 
+  path="/evaluations" 
+  element={
+    <ProtectedRoute>
+      <EvaluationList />
+    </ProtectedRoute>
+  } 
+/>
+
+<Route 
+  path="/evaluations/summary/:tenderId" 
+  element={
+    <ProtectedRoute>
+      <EvaluationSummary />
+    </ProtectedRoute>
+  } 
+/>
+
+<Route 
+  path="/offers/:offerId/evaluate" 
+  element={
+    <ProtectedRoute>
+      <OfferEvaluation />
+    </ProtectedRoute>
+  } 
+/>
+
+<Route 
+  path="/evaluations/performance" 
+  element={
+    <ProtectedRoute>
+      <EvaluatorPerformance />
+    </ProtectedRoute>
+  } 
+/>
             
             {/* Redirect root to dashboard or login */}
             <Route 

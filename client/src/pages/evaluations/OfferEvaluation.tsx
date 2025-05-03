@@ -58,7 +58,7 @@ const OfferEvaluation: React.FC = () => {
       });
 
       // Fetch criteria for the tender
-      const criteriaResponse = await evaluationApi.getAllCriteria({ 
+      const criteriaResponse = await evaluationApi.criteria.getAll({ 
         tender_id: offerResponse.tender 
       });
       setCriteria(criteriaResponse);
@@ -85,15 +85,15 @@ const OfferEvaluation: React.FC = () => {
     const numValue = parseInt(value);
     const criterion = criteria.find(c => c.id === criteriaId);
     if (criterion && numValue >= 0 && numValue <= criterion.max_score) {
-      setEvaluations(prev => prev.map(eval => 
-        eval.criteria_id === criteriaId ? { ...eval, score: numValue } : eval
+      setEvaluations(prev => prev.map(evaluation => 
+        evaluation.criteria_id === criteriaId ? { ...evaluation, score: numValue } : evaluation
       ));
     }
   };
 
   const handleCommentChange = (criteriaId: number, value: string) => {
-    setEvaluations(prev => prev.map(eval => 
-      eval.criteria_id === criteriaId ? { ...eval, comment: value } : eval
+    setEvaluations(prev => prev.map(evaluation => 
+      evaluation.criteria_id === criteriaId ? { ...evaluation, comment: value } : evaluation
     ));
   };
 
@@ -120,11 +120,11 @@ const OfferEvaluation: React.FC = () => {
     e.preventDefault();
     try {
       setSaving(true);
-      await evaluationApi.bulkEvaluate(evaluations.map(eval => ({
+      await evaluationApi.bulkEvaluate(evaluations.map(evaluation => ({
         offer_id: Number(offerId),
-        criteria_id: eval.criteria_id,
-        score: eval.score,
-        comment: eval.comment || undefined,
+        criteria_id: evaluation.criteria_id,
+        score: evaluation.score,
+        comment: evaluation.comment || undefined,
       })));
       navigate('/evaluations');
     } catch (err: any) {

@@ -1,4 +1,3 @@
-// Fixed Layout.tsx with improved notification handling
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,25 +22,36 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true); // Default open on desktop
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState<boolean>(false);
   const [notificationsOpen, setNotificationsOpen] = useState<boolean>(false);
+  
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.notification-dropdown')) {
+        setNotificationsOpen(false);
+      }
+      if (!target.closest('.profile-dropdown')) {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Check screen size on initial load and window resize
   useEffect(() => {
     const checkScreenSize = () => {
       if (window.innerWidth < 768) {
-        setSidebarOpen(false); // Default closed on mobile
+        setSidebarOpen(false);
       }
     };
     
-    // Check on initial load
     checkScreenSize();
-    
-    // Add resize listener
     window.addEventListener('resize', checkScreenSize);
-    
-    // Clean up
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
@@ -60,9 +70,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       };
 
       fetchUnreadCount();
-
-      // Set up interval to check for new notifications
-      const interval = setInterval(fetchUnreadCount, 60000); // Every minute
+      const interval = setInterval(fetchUnreadCount, 60000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
@@ -80,27 +88,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     try {
       const response = await notificationApi.getAll();
       
-      // Handle different response formats
       let notificationsData: Notification[] = [];
       
       if (Array.isArray(response)) {
         notificationsData = response;
-      } else if (response && response.results && Array.isArray(response.results)) {
+      } else if (response?.results && Array.isArray(response.results)) {
         notificationsData = response.results;
       } else {
         console.warn('Unexpected notification response format:', response);
-        return; // Exit if format is unexpected
+        return;
       }
       
-      // Sort notifications by date (newest first)
       const sortedNotifications = [...notificationsData].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       
-      // Get only the 5 most recent
       setNotifications(sortedNotifications.slice(0, 5));
       
-      // Count unread notifications
       const unreadCount = notificationsData.filter(n => !n.is_read).length;
       setUnreadCount(unreadCount);
     } catch (error) {
@@ -108,19 +112,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  // If not authenticated, just render the children without the layout
   if (!isAuthenticated) {
     return <>{children}</>;
   }
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar component */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main Content */}
-      <div className={`flex-1 flex flex-col overflow-hidden ${sidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
-        {/* Top Bar */}
+      <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
         <header className="bg-white shadow-sm z-10">
           <div className="flex items-center justify-between h-16 px-6">
             <button
@@ -134,10 +134,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             <div className="flex items-center">
               {/* Notifications dropdown */}
-              <div className="relative mr-4">
+              <div className="relative mr-4 notification-dropdown">
                 <button
                   onClick={() => {
-                    // Fetch notifications when opening the dropdown
                     if (!notificationsOpen) {
                       fetchNotifications();
                     }
@@ -163,7 +162,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                             try {
                               await notificationApi.markAllAsRead();
                               setUnreadCount(0);
-                              // Update local notifications state to mark all as read
                               setNotifications(prev => 
                                 prev.map(n => ({ ...n, is_read: true }))
                               );
@@ -230,7 +228,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
 
               {/* Profile dropdown */}
-              <div className="relative">
+              <div className="relative profile-dropdown">
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                   className="flex items-center text-gray-600 hover:text-blue-600 focus:outline-none"
@@ -273,7 +271,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        {/* Main Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
           {children}
         </main>

@@ -2,7 +2,8 @@
 // API service layer for making HTTP requests
 
 import { API_ENDPOINTS, getAuthHeaders, getMultipartHeaders } from './config';
-
+import { evaluationApi } from './evaluationApi';
+import { reportsApi } from './reportsApi';
 // Types
 export interface LoginData {
   username: string;
@@ -825,6 +826,12 @@ export default {
   documents: documentApi,
   dashboard: dashboardApi,
   notifications: notificationApi,
-  vendor: vendorApi,  // Add vendor API
-  users: usersApi,  
+  vendor: vendorApi,
+  users: usersApi,
+  evaluations: evaluationApi, // Add this
+  reports: {
+    ...reportsApi,
+  },
 };
+
+export { evaluationApi };

@@ -50,8 +50,26 @@ export const API_ENDPOINTS = {
   EVALUATIONS: {
     BASE: `${API_BASE_URL}/api/evaluations/`,
     DETAIL: (id: number) => `${API_BASE_URL}/api/evaluations/${id}/`,
-    BY_OFFER: (offerId: number) => `${API_BASE_URL}/api/evaluations/?offer_id=${offerId}`,
-    BY_CRITERIA: (criteriaId: number) => `${API_BASE_URL}/api/evaluations/?criteria_id=${criteriaId}`,
+    SUMMARY: `${API_BASE_URL}/api/evaluations/summary/`,
+    PENDING_TASKS: `${API_BASE_URL}/api/evaluations/pending_tasks/`,
+    SUGGEST_SCORE: `${API_BASE_URL}/api/evaluations/suggest_score/`,
+    BULK_EVALUATE: `${API_BASE_URL}/api/evaluations/bulk_evaluate/`,
+    MY_EVALUATIONS: `${API_BASE_URL}/api/evaluations/my_evaluations/`,
+    PERFORMANCE: `${API_BASE_URL}/api/evaluations/evaluator_performance/`,
+    SCORE_DISTRIBUTION: `${API_BASE_URL}/api/evaluations/score_distribution/`,
+    EXPORT: `${API_BASE_URL}/api/evaluations/export_evaluations/`,
+    HISTORY: `${API_BASE_URL}/api/evaluations/evaluation_history/`,
+    STATISTICS: `${API_BASE_URL}/api/evaluations/statistics/`,
+  },
+  
+  EVALUATION_CRITERIA: {
+    BASE: `${API_BASE_URL}/api/evaluation-criteria/`,
+    DETAIL: (id: number) => `${API_BASE_URL}/api/evaluation-criteria/${id}/`,
+    BY_TENDER: (tenderId: number) => `${API_BASE_URL}/api/evaluation-criteria/?tender_id=${tenderId}`,
+    BULK_CREATE: `${API_BASE_URL}/api/evaluation-criteria/bulk_create/`,
+    TEMPLATE: `${API_BASE_URL}/api/evaluation-criteria/template/`,
+    COPY_FROM_TENDER: `${API_BASE_URL}/api/evaluation-criteria/copy_from_tender/`,
+    STATISTICS: `${API_BASE_URL}/api/evaluation-criteria/statistics/`,
   },
   VENDORS: {
     BASE: `${API_BASE_URL}/api/vendor-companies/`,
@@ -59,11 +77,6 @@ export const API_ENDPOINTS = {
     ASSIGN_USER: (id: number) => `${API_BASE_URL}/api/vendor-companies/${id}/assign_user/`,
     REMOVE_USER: (id: number) => `${API_BASE_URL}/api/vendor-companies/${id}/remove_user/`,
     STATISTICS: (id: number) => `${API_BASE_URL}/api/vendor-companies/${id}/statistics/`,
-  },
-  EVALUATION_CRITERIA: {
-    BASE: `${API_BASE_URL}/api/evaluation-criteria/`,
-    DETAIL: (id: number) => `${API_BASE_URL}/api/evaluation-criteria/${id}/`,
-    BY_TENDER: (tenderId: number) => `${API_BASE_URL}/api/evaluation-criteria/?tender_id=${tenderId}`,
   },
   APPROVALS: {
     BASE: `${API_BASE_URL}/api/approvals/`,

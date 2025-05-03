@@ -1,7 +1,8 @@
-// client/src/components/layout/Header.tsx
+// Fixed Header.tsx
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import aadfLogo from '../../assets/aadf-logo-new.svg'; // Import logo properly
 
 const Header: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -30,7 +31,7 @@ const Header: React.FC = () => {
               <Link to="/" className="flex items-center">
                 <img
                   className="h-8 w-auto"
-                  src="/src/assets/aadf-logo-new.svg"
+                  src={aadfLogo}
                   alt="AADF Logo"
                 />
                 <span className="ml-2 text-xl font-bold text-blue-900 hidden sm:block">
