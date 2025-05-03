@@ -75,9 +75,12 @@ export const API_ENDPOINTS = {
   REPORTS: {
     BASE: `${API_BASE_URL}/api/reports/`,
     DETAIL: (id: number) => `${API_BASE_URL}/api/reports/${id}/`,
-    BY_TENDER: (tenderId: number) => `${API_BASE_URL}/api/reports/?tender_id=${tenderId}`,
     GENERATE: `${API_BASE_URL}/api/reports/generate_tender_report/`,
     DOWNLOAD: (id: number) => `${API_BASE_URL}/api/reports/${id}/download/`,
+    REPORT_TYPES: `${API_BASE_URL}/api/reports/report_types/`,
+    GENERATE_COMPARATIVE: `${API_BASE_URL}/api/reports/generate_comparative_report/`,
+    GENERATE_VENDOR: `${API_BASE_URL}/api/reports/generate_vendor_report/`,
+    GENERATE_ARCHIVE: `${API_BASE_URL}/api/reports/generate_archive/`
   },
   NOTIFICATIONS: {
     BASE: `${API_BASE_URL}/api/notifications/`,

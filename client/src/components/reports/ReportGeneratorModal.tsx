@@ -18,6 +18,7 @@ interface ReportGenerationData {
   tender_id: number;
   report_type: string;
   include_attachments?: boolean;
+  include_ai_analysis?: boolean;
   date_range?: {
     from: string;
     to: string;
@@ -34,6 +35,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
     tender_id: 0,
     report_type: 'tender_commission',
     include_attachments: false,
+    include_ai_analysis: true,
     date_range: {
       from: '',
       to: ''
@@ -45,11 +47,13 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Report types
+  // Report types with enhanced AI options
   const reportTypes = [
     { value: 'tender_commission', label: 'Tender Commission Report' },
+    { value: 'ai_tender_analysis', label: 'AI Tender Analysis' },
     { value: 'tender_data', label: 'Tender Data Export (CSV)' },
     { value: 'vendor_performance', label: 'Vendor Performance Analysis' },
+    { value: 'ai_market_insights', label: 'AI Market Insights' },
     { value: 'evaluation_summary', label: 'Evaluation Summary Report' },
   ];
 
@@ -154,6 +158,9 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
     }
   };
 
+  // Check if the selected report type is AI-enabled
+  const isAiReportType = formData.report_type.startsWith('ai_');
+
   if (!isOpen) return null;
 
   return (
@@ -244,6 +251,52 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
                           ))}
                         </select>
                       </div>
+
+                      {/* AI Analysis Option */}
+                      {!isAiReportType && (
+                        <div className="flex items-start">
+                          <div className="flex items-center h-5">
+                            <input
+                              id="include_ai_analysis"
+                              name="include_ai_analysis"
+                              type="checkbox"
+                              className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                              checked={formData.include_ai_analysis}
+                              onChange={handleInputChange}
+                            />
+                          </div>
+                          <div className="ml-3 text-sm">
+                            <label htmlFor="include_ai_analysis" className="font-medium text-gray-700">
+                              Include AI Analysis
+                            </label>
+                            <p className="text-gray-500">Use AI to generate insights, recommendations, and enhanced visualizations</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* AI Info Box */}
+                      {(isAiReportType || formData.include_ai_analysis) && (
+                        <div className="bg-blue-50 rounded p-4">
+                          <div className="flex">
+                            <div className="flex-shrink-0">
+                              <span className="material-icons text-blue-600">smart_toy</span>
+                            </div>
+                            <div className="ml-3">
+                              <h3 className="text-sm font-medium text-blue-800">AI-Enhanced Report</h3>
+                              <div className="mt-2 text-sm text-blue-700">
+                                <p>This report will include AI-generated insights such as:</p>
+                                <ul className="list-disc pl-5 mt-1 space-y-1">
+                                  <li>Trend identification and pattern recognition</li>
+                                  <li>Anomaly detection and risk assessment</li>
+                                  <li>Predictive analytics and forecasting</li>
+                                  <li>Custom visualizations and comparative analysis</li>
+                                  <li>Actionable recommendations</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Include Attachments */}
                       <div className="flex items-start">

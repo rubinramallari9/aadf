@@ -5,6 +5,7 @@ export interface ReportGenerationData {
   tender_id: number;
   report_type: string;
   include_attachments?: boolean;
+  include_ai_analysis?: boolean;
   date_range?: {
     from: string;
     to: string;
@@ -98,26 +99,64 @@ export const reportsApi = {
     return true;
   },
   
-  // Generate a tender commission report
-  generateTenderReport: async (tenderId: number, includeAttachments: boolean = false) => {
-    const response = await fetch(API_ENDPOINTS.REPORTS.GENERATE, {
-      method: 'POST',
+  // Get report types
+  getReportTypes: async () => {
+    const response = await fetch(API_ENDPOINTS.REPORTS.REPORT_TYPES, {
+      method: 'GET',
       headers: getAuthHeaders(),
-      body: JSON.stringify({
-        tender_id: tenderId,
-        report_type: 'tender_commission',
-        include_attachments: includeAttachments
-      }),
     });
     
     if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate tender report');
-      } else {
-        throw new Error('Failed to generate tender report - authentication may have failed');
-      }
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get report types');
+    }
+    
+    return response.json();
+  },
+  
+  // Generate a comparative report
+  generateComparativeReport: async (data: any) => {
+    const response = await fetch(API_ENDPOINTS.REPORTS.GENERATE_COMPARATIVE, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to generate comparative report');
+    }
+    
+    return response.json();
+  },
+  
+  // Generate a vendor report
+  generateVendorReport: async (data: any) => {
+    const response = await fetch(API_ENDPOINTS.REPORTS.GENERATE_VENDOR, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to generate vendor report');
+    }
+    
+    return response.json();
+  },
+  
+  // Generate a document archive
+  generateArchive: async (data: any) => {
+    const response = await fetch(API_ENDPOINTS.REPORTS.GENERATE_ARCHIVE, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to generate archive');
     }
     
     return response.json();
