@@ -4,9 +4,10 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     TenderViewSet, OfferViewSet, TenderDocumentViewSet, OfferDocumentViewSet,
-    EvaluationViewSet, LoginView, LogoutView, RegisterView, ChangePasswordView,
+    EvaluationViewSet, ChangePasswordView,
     DocumentDownloadView, VendorCompanyViewSet, VendorUserViewSet, EvaluationCriteriaViewSet,
     ApprovalViewSet, ReportViewSet, NotificationViewSet, AuditLogViewSet,
+    LoginView, LogoutView, RegisterView, ChangePasswordView, AdminCreateUserView,
     UserProfileView, DashboardView, TenderSearchView, UserManagementView
 )
 
@@ -28,12 +29,15 @@ urlpatterns = [
     # API Endpoints
     path('', include(router.urls)),
 
+   
     # Authentication Endpoints
     path('auth/login/', LoginView.as_view(), name='login'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('auth/profile/', UserProfileView.as_view(), name='user-profile'),
+    path('auth/admin-create-user/', AdminCreateUserView.as_view(), name='admin-create-user'),  # Add this line
+    
 
     # File Download Endpoint
     path('download/<str:document_type>/<int:document_id>/', DocumentDownloadView.as_view(), name='document-download'),

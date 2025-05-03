@@ -100,6 +100,22 @@ export const authApi = {
     return response.json();
   },
   
+  // New method for admin user creation
+  adminCreateUser: async (data: RegisterData) => {
+    const response = await fetch(API_ENDPOINTS.AUTH.ADMIN_CREATE_USER, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create user');
+    }
+    
+    return response.json();
+  },
+  
   changePassword: async (data: ChangePasswordData) => {
     const response = await fetch(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
       method: 'POST',

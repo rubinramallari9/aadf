@@ -186,7 +186,6 @@ class RegisterView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class ChangePasswordView(APIView):
     """Handle password change for authenticated users"""
     permission_classes = [permissions.IsAuthenticated]
@@ -294,4 +293,43 @@ class UserProfileView(APIView):
             )
             
             return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class AdminCreateUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        # Check if the requester is an admin
+        if request.user.role != 'admin':
+            return Response(
+                {'error': 'Only administrators can create users'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            # Create the user
+            user = serializer.save()
+            
+            # Log the creation
+            AuditLog.objects.create(
+                user=request.user,
+                action='create_user',
+                entity_type='user',
+                entity_id=user.id,
+                details={'role': user.role},
+                ip_address=request.META.get('REMOTE_ADDR', '')
+            )
+            
+            # Create welcome notification
+            create_notification(
+                user=user,
+                title='Welcome to AADF Procurement Platform',
+                message='Your account has been created.',
+                notification_type='info'
+            )
+
+            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

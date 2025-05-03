@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
     REGISTER: `${API_BASE_URL}/api/auth/register/`,
     CHANGE_PASSWORD: `${API_BASE_URL}/api/auth/change-password/`,
     PROFILE: `${API_BASE_URL}/api/auth/profile/`,
+    ADMIN_CREATE_USER: `${API_BASE_URL}/api/auth/admin-create-user/`, 
   },
   TENDERS: {
     BASE: `${API_BASE_URL}/api/tenders/`,

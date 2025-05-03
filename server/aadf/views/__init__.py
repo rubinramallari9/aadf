@@ -1,6 +1,6 @@
 # server/aadf/views/__init__.py
 
-from .auth_views import LoginView, LogoutView, RegisterView, ChangePasswordView, UserProfileView
+from .auth_views import LoginView, LogoutView, RegisterView, ChangePasswordView, UserProfileView, AdminCreateUserView
 from .tender_views import TenderViewSet
 from .offer_views import OfferViewSet
 from .document_views import (

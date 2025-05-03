@@ -98,7 +98,9 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleSubmitUserForm = async (e: React.FormEvent) => {
+  // client/src/pages/AdminDashboard.tsx
+
+const handleSubmitUserForm = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (isEditMode && selectedUserId) {
@@ -108,8 +110,8 @@ const AdminDashboard: React.FC = () => {
           id: selectedUserId
         });
       } else {
-        // Create new user with authApi.register
-        await authApi.register({
+        // Create new user with authApi.adminCreateUser instead of authApi.register
+        await authApi.adminCreateUser({
           ...userFormData,
           // Ensure password is included for new users
           password: userFormData.password || ''
