@@ -1,4 +1,4 @@
-// client/src/pages/Reports.tsx - Enhanced with AI features
+// client/src/pages/Reports.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
@@ -72,6 +72,7 @@ const Reports: React.FC = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
+      setError(null);
       // Use the reportsApi which properly handles authentication
       const response = await reportsApi.getAll();
       
@@ -136,7 +137,7 @@ const Reports: React.FC = () => {
       setGeneratingReport(true);
       
       // Add AI analysis flag to the request
-      data.enableAiAnalysis = isAiAnalysisEnabled;
+      data.include_ai_analysis = isAiAnalysisEnabled;
       
       await reportsApi.generateReport(data);
       await fetchReports(); // Refresh the list
@@ -152,7 +153,7 @@ const Reports: React.FC = () => {
   const handleComparativeReport = async (data: any) => {
     try {
       setGeneratingReport(true);
-      data.enableAiAnalysis = isAiAnalysisEnabled;
+      data.include_ai_analysis = isAiAnalysisEnabled;
       await reportsApi.generateComparativeReport(data);
       await fetchReports();
       setShowComparativeModal(false);
@@ -167,7 +168,7 @@ const Reports: React.FC = () => {
   const handleVendorAnalysisReport = async (data: any) => {
     try {
       setGeneratingReport(true);
-      data.enableAiAnalysis = isAiAnalysisEnabled;
+      data.include_ai_analysis = isAiAnalysisEnabled;
       await reportsApi.generateVendorReport(data);
       await fetchReports();
       setShowVendorAnalysisModal(false);
@@ -255,46 +256,14 @@ const Reports: React.FC = () => {
             <p className="mt-1 text-sm text-gray-500">Generate and manage procurement reports</p>
           </div>
           <div className="flex gap-2">
-            <div className="dropdown inline-block relative">
-              <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <div className="relative inline-block text-left">
+              <button 
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                onClick={() => setShowGeneratorModal(true)}
+              >
                 <span className="material-icons mr-2 text-sm">add</span>
                 Generate Report
-                <span className="material-icons ml-1">arrow_drop_down</span>
               </button>
-              <ul className="dropdown-menu absolute hidden text-gray-700 pt-1 right-0 z-10 w-56">
-                <li>
-                  <button
-                    onClick={() => setShowGeneratorModal(true)}
-                    className="rounded-t bg-white hover:bg-gray-100 py-2 px-4 block whitespace-no-wrap w-full text-left"
-                  >
-                    Tender Report
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => setShowComparativeModal(true)}
-                    className="bg-white hover:bg-gray-100 py-2 px-4 block whitespace-no-wrap w-full text-left"
-                  >
-                    Comparative Analysis
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => setShowVendorAnalysisModal(true)}
-                    className="bg-white hover:bg-gray-100 py-2 px-4 block whitespace-no-wrap w-full text-left"
-                  >
-                    Vendor Analysis
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => alert('Please select a tender first to generate an archive')}
-                    className="rounded-b bg-white hover:bg-gray-100 py-2 px-4 block whitespace-no-wrap w-full text-left"
-                  >
-                    Document Archive
-                  </button>
-                </li>
-              </ul>
             </div>
           </div>
         </div>
@@ -382,7 +351,7 @@ const Reports: React.FC = () => {
                 <span className="material-icons mr-2 text-sm">refresh</span>
                 Reset
               </button>
-              <button
+                              <button
                 onClick={applyFilters}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
@@ -553,199 +522,6 @@ const Reports: React.FC = () => {
         onClose={() => setShowGeneratorModal(false)}
         onGenerate={handleReportGeneration}
       />
-
-      {/* Comparative Analysis Modal */}
-      {showComparativeModal && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                      Generate Comparative Analysis
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500">
-                        Compare multiple tenders to identify patterns and insights.
-                      </p>
-                      {/* Comparative analysis form would go here */}
-                      <div className="mt-4">
-                        <div className="form-group mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Select Tenders to Compare
-                          </label>
-                          <select multiple className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md h-32">
-                            <option>TND-20250101-ABCDEF - Office Supplies</option>
-                            <option>TND-20250215-123456 - IT Equipment</option>
-                            <option>TND-20250305-XYZ123 - Consulting Services</option>
-                          </select>
-                          <p className="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple tenders</p>
-                        </div>
-                        
-                        <div className="form-group mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Format
-                          </label>
-                          <div className="flex space-x-4">
-                            <div className="flex items-center">
-                              <input type="radio" id="format-pdf" name="format" value="pdf" className="h-4 w-4 text-blue-600" defaultChecked />
-                              <label htmlFor="format-pdf" className="ml-2 text-sm text-gray-700">PDF Report</label>
-                            </div>
-                            <div className="flex items-center">
-                              <input type="radio" id="format-csv" name="format" value="csv" className="h-4 w-4 text-blue-600" />
-                              <label htmlFor="format-csv" className="ml-2 text-sm text-gray-700">CSV Data</label>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="form-group flex items-center mt-4">
-                          <input 
-                            type="checkbox" 
-                            id="include-ai-analysis" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            checked={isAiAnalysisEnabled}
-                            onChange={() => setIsAiAnalysisEnabled(!isAiAnalysisEnabled)}
-                          />
-                          <label htmlFor="include-ai-analysis" className="ml-2 block text-sm text-gray-900">
-                            Include AI Analysis
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button 
-                  type="button" 
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => alert('Generating comparative analysis...')}
-                  disabled={generatingReport}
-                >
-                  {generatingReport ? 'Generating...' : 'Generate Analysis'}
-                </button>
-                <button 
-                  type="button" 
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => setShowComparativeModal(false)}
-                  disabled={generatingReport}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Vendor Analysis Modal */}
-      {showVendorAnalysisModal && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                      Generate Vendor Analysis
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500">
-                        Analyze vendor performance and participation over time.
-                      </p>
-                      <div className="mt-4">
-                        <div className="form-group mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Select Vendor
-                          </label>
-                          <select className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                            <option value="">Select a vendor</option>
-                            <option value="1">TechSolutions Inc</option>
-                            <option value="2">Global Supplies Ltd</option>
-                            <option value="3">Consulting Partners Group</option>
-                          </select>
-                        </div>
-                        
-                        <div className="form-group mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Analysis Period
-                          </label>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-xs text-gray-500 mb-1">From</label>
-                              <input type="date" className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" />
-                            </div>
-                            <div>
-                              <label className="block text-xs text-gray-500 mb-1">To</label>
-                              <input type="date" className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="form-group mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Report Format
-                          </label>
-                          <div className="flex space-x-4">
-                            <div className="flex items-center">
-                              <input type="radio" id="v-format-pdf" name="v-format" value="pdf" className="h-4 w-4 text-blue-600" defaultChecked />
-                              <label htmlFor="v-format-pdf" className="ml-2 text-sm text-gray-700">PDF Report</label>
-                            </div>
-                            <div className="flex items-center">
-                              <input type="radio" id="v-format-csv" name="v-format" value="csv" className="h-4 w-4 text-blue-600" />
-                              <label htmlFor="v-format-csv" className="ml-2 text-sm text-gray-700">CSV Data</label>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="form-group flex items-center mt-4">
-                          <input 
-                            type="checkbox" 
-                            id="v-include-ai-analysis" 
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            checked={isAiAnalysisEnabled}
-                            onChange={() => setIsAiAnalysisEnabled(!isAiAnalysisEnabled)}
-                          />
-                          <label htmlFor="v-include-ai-analysis" className="ml-2 block text-sm text-gray-900">
-                            Include AI Analysis
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button 
-                  type="button" 
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => alert('Generating vendor analysis...')}
-                  disabled={generatingReport}
-                >
-                  {generatingReport ? 'Generating...' : 'Generate Analysis'}
-                </button>
-                <button 
-                  type="button" 
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => setShowVendorAnalysisModal(false)}
-                  disabled={generatingReport}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </Layout>
   );
 };

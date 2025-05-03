@@ -18,6 +18,7 @@ interface ReportGenerationData {
   tender_id: number;
   report_type: string;
   include_attachments?: boolean;
+  include_ai_analysis?: boolean;
   date_range?: {
     from: string;
     to: string;
@@ -34,6 +35,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
     tender_id: 0,
     report_type: 'tender_commission',
     include_attachments: false,
+    include_ai_analysis: true,
     date_range: {
       from: '',
       to: ''
@@ -51,6 +53,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
     { value: 'tender_data', label: 'Tender Data Export (CSV)' },
     { value: 'vendor_performance', label: 'Vendor Performance Analysis' },
     { value: 'evaluation_summary', label: 'Evaluation Summary Report' },
+    { value: 'ai_tender_analysis', label: 'AI-Enhanced Analysis' },
   ];
 
   useEffect(() => {
@@ -78,24 +81,8 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
       setLoading(true);
       setError(null);
       
-      // Try different API calls to find the working one
-      let response = null;
-      
-      // First try with specific status
-      try {
-        response = await tenderApi.getAll({ status: 'closed,awarded' });
-      } catch (err) {
-        console.log('Initial API call failed:', err);
-      }
-      
-      // If that fails, try without filters
-      if (!response) {
-        try {
-          response = await tenderApi.getAll();
-        } catch (err) {
-          console.log('Second API call failed:', err);
-        }
-      }
+      // Fetch all tenders without filtering by status
+      const response = await tenderApi.getAll();
       
       // Handle different response formats
       let tendersData: Tender[] = [];
@@ -198,7 +185,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* Background overlay */}
         <div 
-          className="fixed inset-0 bg-transparent transition-opacity" 
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
           aria-hidden="true"
           onClick={onClose}
         ></div>
@@ -248,7 +235,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
                           id="tender_id"
                           name="tender_id"
                           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                          value={formData.tender_id}
+                          value={formData.tender_id || ''}
                           onChange={handleInputChange}
                           required
                         >
@@ -259,6 +246,9 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
                             </option>
                           ))}
                         </select>
+                        {loading && (
+                          <p className="mt-1 text-sm text-gray-500">Loading tenders...</p>
+                        )}
                         {tenders.length === 0 && !loading && (
                           <p className="mt-1 text-sm text-gray-500">
                             No tenders available. Only closed or awarded tenders can be selected for reports.
@@ -304,6 +294,26 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
                             Include Attachments
                           </label>
                           <p className="text-gray-500">Include all related documents and attachments in the report</p>
+                        </div>
+                      </div>
+                      
+                      {/* Include AI Analysis */}
+                      <div className="flex items-start">
+                        <div className="flex items-center h-5">
+                          <input
+                            id="include_ai_analysis"
+                            name="include_ai_analysis"
+                            type="checkbox"
+                            className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                            checked={formData.include_ai_analysis}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="ml-3 text-sm">
+                          <label htmlFor="include_ai_analysis" className="font-medium text-gray-700">
+                            Include AI Analysis
+                          </label>
+                          <p className="text-gray-500">Enable AI-powered insights in the report</p>
                         </div>
                       </div>
                       
