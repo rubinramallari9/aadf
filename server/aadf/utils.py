@@ -634,3 +634,44 @@ def log_system_event(event_type, details=None):
     except Exception as e:
         logger.error(f"Error logging system event: {e}")
         return False
+
+def generate_secure_document_link(document, expires_in_minutes=60):
+    """Generate a unique reference number"""
+    import hashlib
+    import time
+    
+    # Create an expiration timestamp
+    expiration = int(time.time()) + (expires_in_minutes * 60)
+    
+    # Create a signature with document ID and expiration
+    document_id = str(document.id)
+    document_type = 'tender' if hasattr(document, 'tender') and not hasattr(document, 'vendor') else \
+                    'offer' if hasattr(document, 'tender') and hasattr(document, 'vendor') else 'report'
+    secret_key = settings.SECRET_KEY
+    
+    # Generate signature
+    signature_data = f"{document_type}:{document_id}:{expiration}:{secret_key}"
+    signature = hashlib.sha256(signature_data.encode()).hexdigest()
+    
+    # Create download URL
+    download_url = f"/api/download/{document_type}/{document_id}/?expires={expiration}&signature={signature}"
+    
+    return download_url
+
+def verify_document_signature(document_type, document_id, expires, signature):
+    """Verify the signature for secure document download"""
+    import hashlib
+    import time
+    
+    # Check if expired
+    current_time = int(time.time())
+    if current_time > int(expires):
+        return False
+    
+    # Recreate the signature
+    secret_key = settings.SECRET_KEY
+    signature_data = f"{document_type}:{document_id}:{expires}:{secret_key}"
+    expected_signature = hashlib.sha256(signature_data.encode()).hexdigest()
+    
+    # Compare signatures
+    return signature == expected_signature

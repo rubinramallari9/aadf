@@ -39,6 +39,12 @@ export const API_ENDPOINTS = {
       BASE: `${API_BASE_URL}/api/tender-documents/`,
       DETAIL: (id: number) => `${API_BASE_URL}/api/tender-documents/${id}/`,
       BY_TENDER: (tenderId: number) => `${API_BASE_URL}/api/tender-documents/?tender_id=${tenderId}`,
+
+      SECURE_DOWNLOAD: {
+        REPORT: (id: number) => `${API_BASE_URL}/api/reports/${id}/secure-download-link/`,
+        TENDER: (id: number) => `${API_BASE_URL}/api/tender-documents/${id}/secure-download-link/`,
+        OFFER: (id: number) => `${API_BASE_URL}/api/offer-documents/${id}/secure-download-link/`,
+      },
     },
     OFFER: {
       BASE: `${API_BASE_URL}/api/offer-documents/`,

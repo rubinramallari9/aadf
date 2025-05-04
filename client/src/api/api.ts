@@ -603,6 +603,55 @@ export const offerApi = {
 
 // Document APIs
 export const documentApi = {
+  getSecureDownloadLink: async (documentType: string, documentId: number, expiresInMinutes = 60) => {
+    let endpoint;
+    
+    switch(documentType) {
+      case 'report':
+        endpoint = API_ENDPOINTS.DOCUMENTS.SECURE_DOWNLOAD.REPORT(documentId);
+        break;
+      case 'tender':
+        endpoint = API_ENDPOINTS.DOCUMENTS.SECURE_DOWNLOAD.TENDER(documentId);
+        break;
+      case 'offer':
+        endpoint = API_ENDPOINTS.DOCUMENTS.SECURE_DOWNLOAD.OFFER(documentId);
+        break;
+      default:
+        throw new Error(`Unsupported document type: ${documentType}`);
+    }
+    
+    // Add expiration parameter if provided
+    if (expiresInMinutes !== 60) {
+      endpoint += `?expires_in=${expiresInMinutes}`;
+    }
+    
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get secure download link');
+    }
+    
+    return response.json();
+  },
+  
+  downloadWithSecureLink: async (documentType: string, documentId: number) => {
+    try {
+      // Get a secure link
+      const linkData = await documentApi.getSecureDownloadLink(documentType, documentId);
+      
+      // Use the secure link to download the file
+      window.open(linkData.download_url, '_blank');
+      
+      return true;
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      throw error;
+    },
+  },
   // Tender documents
   uploadTenderDocument: async (tenderId: number, file: File) => {
     const formData = new FormData();

@@ -208,6 +208,38 @@ class ReportViewSet(viewsets.ModelViewSet):
         data['ai_analysis'] = report_data
         
         return Response(data)
+    
+    @action(detail=True, methods=['get'])
+    def secure_download_link(self, request, pk=None):
+        """Generate a secure download link for a report"""
+        report = self.get_object()
+        
+        # Get expiration time from query params or use default
+        expires_in_minutes = int(request.query_params.get('expires_in', 60))
+        
+        # Generate link
+        download_url = generate_secure_document_link(report, expires_in_minutes=expires_in_minutes)
+        
+        # Log the link generation
+        AuditLog.objects.create(
+            user=request.user,
+            action='generate_download_link',
+            entity_type='report',
+            entity_id=report.id,
+            details={
+                'report_type': report.report_type,
+                'filename': report.filename,
+                'expiration_minutes': expires_in_minutes
+            },
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+        
+        # Return the secure download link
+        return Response({
+            'download_url': download_url,
+            'expires_in': f'{expires_in_minutes} minutes',
+            'report_filename': report.filename
+        })
 
     @action(detail=False, methods=['post'])
     def analyze_bidding_package(self, request):

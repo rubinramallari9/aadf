@@ -56,7 +56,7 @@ urlpatterns = [
     path('users/', UserManagementView.as_view(), name='user-list'),
     path('users/<int:user_id>/', UserManagementView.as_view(), name='user-detail'),
     path('users/<int:user_id>/reset-password/', UserManagementView.as_view(), name='user-reset-password'),
-    
+    path('reports/<int:pk>/secure-download-link/', ReportViewSet.as_view({'get': 'secure_download_link'}), name='report-secure-download-link'),
     # AI-enhanced endpoints
     path('ai/analyze-tender/<int:tender_id>/', TenderViewSet.as_view({'get': 'analyze_tender'}), name='ai-analyze-tender'),
     path('ai/analyze-offer/<int:offer_id>/', OfferViewSet.as_view({'get': 'analyze_offer'}), name='ai-analyze-offer'),

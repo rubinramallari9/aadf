@@ -685,13 +685,23 @@ class DocumentDownloadView(APIView):
         signature = request.query_params.get('signature')
         
         if expires and signature:
-            from ..utils import verify_document_signature
-            
+            # Verify the signature
             if not verify_document_signature(document_type, document_id, expires, signature):
                 return Response(
                     {'error': 'Invalid or expired download link'},
                     status=status.HTTP_403_FORBIDDEN
                 )
+                
+            # If signature is valid, allow access without authentication check
+            authenticated_by_signature = True
+        else:
+            # If no signature provided, require authentication
+            if not request.user.is_authenticated:
+                return Response(
+                    {'error': 'Authentication required'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            authenticated_by_signature = False
                 
         try:
             if document_type == 'tender':
