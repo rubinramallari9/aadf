@@ -1,4 +1,4 @@
-// components/documents/SecureDocumentDownloader.tsx
+// client/src/components/documents/SecureDocumentDownloader.tsx
 import React, { useState } from 'react';
 import { documentApi } from '../../api/DocumentApi';
 import { useAuth } from '../../contexts/AuthContext';
@@ -47,13 +47,50 @@ const SecureDocumentDownloader: React.FC<SecureDocumentDownloaderProps> = ({
     setError(null);
     
     try {
-      const result = await documentApi.downloadWithSecureLink(documentType, documentId);
+      // Get a secure download URL first
+      const secureUrlResponse = await fetch(`/api/${documentType}s/${documentId}/secure-download-link/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
-      if (result === true) {
-        if (onSuccess) onSuccess();
-      } else {
-        throw new Error('Download failed');
+      if (!secureUrlResponse.ok) {
+        throw new Error(`Failed to get secure download link: ${secureUrlResponse.status}`);
       }
+      
+      const secureUrlData = await secureUrlResponse.json();
+      const downloadUrl = secureUrlData.download_url;
+      
+      // Perform the actual download using the Fetch API
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        // No need to include Authorization headers, the URL contains the token
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create a link element to trigger the download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = secureUrlData.report_filename || `document-${documentId}`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      if (onSuccess) onSuccess();
     } catch (err: any) {
       console.error('Failed to download document:', err);
       
@@ -62,15 +99,15 @@ const SecureDocumentDownloader: React.FC<SecureDocumentDownloaderProps> = ({
         // Received HTML instead of JSON - likely an auth issue
         setError('Your session may have expired. Please try logging in again.');
         if (onError) onError(new Error('Session expired'));
-      } else if (err.response?.status === 401 || err.message?.includes('401') || err.message?.includes('unauthorized')) {
+      } else if (err.message?.includes('401') || err.message?.includes('unauthorized')) {
         // Explicit authentication error
         setError('Authentication failed. Please log in again.');
         if (onError) onError(new Error('Authentication failed'));
-      } else if (err.response?.status === 403 || err.message?.includes('403') || err.message?.includes('forbidden')) {
+      } else if (err.message?.includes('403') || err.message?.includes('forbidden')) {
         // Permission error
         setError('You do not have permission to download this document.');
         if (onError) onError(new Error('Permission denied'));
-      } else if (err.response?.status === 404 || err.message?.includes('404') || err.message?.includes('not found')) {
+      } else if (err.message?.includes('404') || err.message?.includes('not found')) {
         // Document not found
         setError('Document not found. It may have been deleted or moved.');
         if (onError) onError(new Error('Document not found'));

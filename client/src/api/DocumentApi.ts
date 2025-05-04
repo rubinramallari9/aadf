@@ -1,20 +1,14 @@
-// client/src/api/documentApi.ts
-import { API_ENDPOINTS, getAuthHeaders, getMultipartHeaders } from './config';
+// client/src/api/DocumentApi.ts
+import { API_ENDPOINTS, getAuthHeaders } from './config';
 
-// Document type interfaces
-export interface Document {
+export interface DocumentUploadResponse {
   id: number;
   filename: string;
   original_filename: string;
   file_size: number;
   mime_type: string;
-  document_type: string;
+  document_type?: string;
   created_at: string;
-}
-
-export interface SecureDownloadLinkResponse {
-  download_url: string;
-  expires_at: string;
 }
 
 // Helper function to check if the response is HTML instead of JSON
@@ -34,291 +28,197 @@ const isHtmlResponse = async (response: Response): Promise<boolean> => {
   }
 };
 
-// Helper function to refresh token if needed (stub - implement based on your auth system)
-const refreshAuthToken = async (): Promise<boolean> => {
-  // This is a placeholder - implement your actual token refresh logic
-  // For example, you might want to call your auth service's refresh endpoint
-  try {
-    // Example:
-    // const response = await fetch(API_ENDPOINTS.AUTH.REFRESH_TOKEN, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ refresh_token: localStorage.getItem('refreshToken') })
-    // });
-    // if (response.ok) {
-    //   const data = await response.json();
-    //   localStorage.setItem('token', data.token);
-    //   return true;
-    // }
-    
-    // For now, just returning false since this is a stub
-    return false;
-  } catch (error) {
-    console.error('Token refresh failed:', error);
-    return false;
-  }
-};
-
-// Document API methods
 export const documentApi = {
-  // Secure download link methods
-  getSecureDownloadLink: async (documentType: string, documentId: number, expiresInMinutes = 60): Promise<SecureDownloadLinkResponse> => {
-    let endpoint;
-    
-    switch(documentType) {
-      case 'report':
-        endpoint = API_ENDPOINTS.DOCUMENTS.SECURE_DOWNLOAD.REPORT(documentId);
-        break;
-      case 'tender':
-        endpoint = API_ENDPOINTS.DOCUMENTS.SECURE_DOWNLOAD.TENDER(documentId);
-        break;
-      case 'offer':
-        endpoint = API_ENDPOINTS.DOCUMENTS.SECURE_DOWNLOAD.OFFER(documentId);
-        break;
-      default:
-        throw new Error(`Unsupported document type: ${documentType}`);
-    }
-    
-    // Add expiration parameter if provided
-    if (expiresInMinutes !== 60) {
-      endpoint += `?expires_in=${expiresInMinutes}`;
-    }
-    
+  // Tender document methods
+  getTenderDocuments: async (tenderId: number): Promise<any[]> => {
     try {
-      console.log(`Getting secure download link for ${documentType} document ID: ${documentId}`);
-      
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_ENDPOINTS.TENDER_DOCUMENTS}?tender_id=${tenderId}`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders()
       });
       
-      // Check if the response is HTML (usually means auth issue)
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response instead of JSON. You may need to log in again.');
-      }
-      
-      // Handle authentication failure
-      if (response.status === 401) {
-        console.log('Authentication failed, attempting to refresh token...');
-        
-        // Try to refresh the token
-        const refreshed = await refreshAuthToken();
-        
-        if (refreshed) {
-          // Retry the request with the new token
-          const retryResponse = await fetch(endpoint, {
-            method: 'GET',
-            headers: getAuthHeaders(),
-          });
-          
-          if (!retryResponse.ok) {
-            throw new Error('Failed to get secure download link even after token refresh');
-          }
-          
-          return retryResponse.json();
-        } else {
-          throw new Error('Authentication failed and token refresh was unsuccessful');
-        }
-      }
-      
       if (!response.ok) {
-        // Try to get error details from the response
-        try {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to get secure download link: ${response.status} ${response.statusText}`);
-        } catch (jsonError) {
-          throw new Error(`Failed to get secure download link: ${response.status} ${response.statusText}`);
-        }
+        throw new Error(`Failed to get tender documents: ${response.status}`);
       }
       
-      const data = await response.json();
-      console.log('Received secure download link:', data);
-      return data;
+      return await response.json();
     } catch (error) {
-      console.error('Error getting secure download link:', error);
+      console.error("Error fetching tender documents:", error);
       throw error;
     }
   },
   
-  downloadWithSecureLink: async (documentType: string, documentId: number): Promise<boolean> => {
+  uploadTenderDocument: async (tenderId: number, file: File, documentType?: string): Promise<DocumentUploadResponse> => {
     try {
-      console.log(`Downloading ${documentType} document ID: ${documentId} with secure link`);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tender_id', tenderId.toString());
       
-      // Get a secure link
-      const linkData = await documentApi.getSecureDownloadLink(documentType, documentId);
-      
-      if (!linkData || !linkData.download_url) {
-        throw new Error('Invalid download URL received');
+      if (documentType) {
+        formData.append('document_type', documentType);
       }
       
-      // Use the secure link to download the file
-      window.open(linkData.download_url, '_blank');
+      const response = await fetch(API_ENDPOINTS.TENDER_DOCUMENTS, {
+        method: 'POST',
+        headers: {
+          // Do not include Content-Type header when using FormData
+          'Authorization': getAuthHeaders().Authorization
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to upload document: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error("Error uploading tender document:", error);
+      throw error;
+    }
+  },
+  
+  deleteTenderDocument: async (documentId: number): Promise<void> => {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.TENDER_DOCUMENTS}/${documentId}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete document: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error deleting tender document:", error);
+      throw error;
+    }
+  },
+  
+  // Offer document methods
+  getOfferDocuments: async (offerId: number): Promise<any[]> => {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.OFFER_DOCUMENTS}?offer_id=${offerId}`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to get offer documents: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching offer documents:", error);
+      throw error;
+    }
+  },
+  
+  uploadOfferDocument: async (offerId: number, file: File, documentType?: string): Promise<DocumentUploadResponse> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('offer_id', offerId.toString());
+      
+      if (documentType) {
+        formData.append('document_type', documentType);
+      }
+      
+      const response = await fetch(API_ENDPOINTS.OFFER_DOCUMENTS, {
+        method: 'POST',
+        headers: {
+          // Do not include Content-Type header when using FormData
+          'Authorization': getAuthHeaders().Authorization
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to upload document: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error("Error uploading offer document:", error);
+      throw error;
+    }
+  },
+  
+  deleteOfferDocument: async (documentId: number): Promise<void> => {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.OFFER_DOCUMENTS}/${documentId}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete document: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error deleting offer document:", error);
+      throw error;
+    }
+  },
+  
+  // Secure download method using programmatic fetch with auth headers
+  downloadWithSecureLink: async (documentType: 'report' | 'tender' | 'offer', documentId: number): Promise<boolean> => {
+    try {
+      console.log(`Starting secure download for ${documentType} ${documentId}`);
+      
+      // First, get the secure download URL
+      const secureUrlEndpoint = `${API_ENDPOINTS[`${documentType.toUpperCase()}S`].BASE}/${documentId}/secure-download-link/`;
+      console.log("Requesting secure URL from:", secureUrlEndpoint);
+      
+      const secureUrlResponse = await fetch(secureUrlEndpoint, {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+      
+      // Check if the response is HTML (possible auth issue)
+      if (await isHtmlResponse(secureUrlResponse)) {
+        throw new Error('Received HTML response. Your session may have expired.');
+      }
+      
+      if (!secureUrlResponse.ok) {
+        throw new Error(`Failed to get secure download link: ${secureUrlResponse.status}`);
+      }
+      
+      const secureUrlData = await secureUrlResponse.json();
+      const downloadUrl = secureUrlData.download_url;
+      console.log("Received secure download URL:", downloadUrl);
+      
+      // Use the secure URL to download the file
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        // Note: No auth headers required here as the URL is already authenticated
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create a link element to trigger the download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = secureUrlData.filename || `${documentType}-${documentId}`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 0);
       
       return true;
     } catch (error) {
-      console.error('Error downloading document:', error);
+      console.error(`Error downloading ${documentType} ${documentId}:`, error);
       throw error;
     }
-  },
-  
-  // Tender documents
-  uploadTenderDocument: async (tenderId: number, file: File): Promise<Document> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('tender_id', tenderId.toString());
-    
-    try {
-      const response = await fetch(API_ENDPOINTS.DOCUMENTS.TENDER.BASE, {
-        method: 'POST',
-        headers: getMultipartHeaders(),
-        body: formData,
-      });
-      
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response instead of JSON. You may need to log in again.');
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload document');
-      }
-      
-      return response.json();
-    } catch (error) {
-      console.error('Error uploading tender document:', error);
-      throw error;
-    }
-  },
-  
-  getTenderDocuments: async (tenderId: number): Promise<Document[]> => {
-    try {
-      const response = await fetch(API_ENDPOINTS.DOCUMENTS.TENDER.BY_TENDER(tenderId), {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response instead of JSON. You may need to log in again.');
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get tender documents');
-      }
-      
-      return response.json();
-    } catch (error) {
-      console.error('Error getting tender documents:', error);
-      throw error;
-    }
-  },
-  
-  deleteTenderDocument: async (id: number): Promise<boolean> => {
-    try {
-      const response = await fetch(API_ENDPOINTS.DOCUMENTS.TENDER.DETAIL(id), {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-      
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response instead of JSON. You may need to log in again.');
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete document');
-      }
-      
-      return response.ok;
-    } catch (error) {
-      console.error('Error deleting tender document:', error);
-      throw error;
-    }
-  },
-  
-  // Offer documents
-  uploadOfferDocument: async (offerId: number, file: File, documentType?: string): Promise<Document> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('offer_id', offerId.toString());
-    if (documentType) {
-      formData.append('document_type', documentType);
-    }
-    
-    try {
-      const response = await fetch(API_ENDPOINTS.DOCUMENTS.OFFER.BASE, {
-        method: 'POST',
-        headers: getMultipartHeaders(),
-        body: formData,
-      });
-      
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response instead of JSON. You may need to log in again.');
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload document');
-      }
-      
-      return response.json();
-    } catch (error) {
-      console.error('Error uploading offer document:', error);
-      throw error;
-    }
-  },
-  
-  getOfferDocuments: async (offerId: number): Promise<Document[]> => {
-    try {
-      const response = await fetch(API_ENDPOINTS.DOCUMENTS.OFFER.BY_OFFER(offerId), {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response instead of JSON. You may need to log in again.');
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get offer documents');
-      }
-      
-      return response.json();
-    } catch (error) {
-      console.error('Error getting offer documents:', error);
-      throw error;
-    }
-  },
-  
-  deleteOfferDocument: async (id: number): Promise<boolean> => {
-    try {
-      const response = await fetch(API_ENDPOINTS.DOCUMENTS.OFFER.DETAIL(id), {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-      
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response instead of JSON. You may need to log in again.');
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete document');
-      }
-      
-      return response.ok;
-    } catch (error) {
-      console.error('Error deleting offer document:', error);
-      throw error;
-    }
-  },
-  
-  // Legacy download method (to be replaced with secure downloads)
-  getDocumentDownloadUrl: (documentType: string, documentId: number): string => {
-    const token = localStorage.getItem('token');
-    return `${API_ENDPOINTS.DOCUMENTS.DOWNLOAD(documentType, documentId)}?token=${token}`;
   }
 };
-
-export default documentApi;

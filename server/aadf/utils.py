@@ -657,7 +657,23 @@ def generate_secure_document_link(document, expires_in_minutes=60):
     download_url = f"/api/download/{document_type}/{document_id}/?expires={expiration}&signature={signature}"
     
     return download_url
-
+def verify_document_signature(document_type, document_id, expires, signature):
+    """Verify the signature for secure document download"""
+    import hashlib
+    import time
+    
+    # Check if expired
+    current_time = int(time.time())
+    if current_time > int(expires):
+        return False
+    
+    # Recreate the signature
+    secret_key = settings.SECRET_KEY
+    signature_data = f"{document_type}:{document_id}:{expires}:{secret_key}"
+    expected_signature = hashlib.sha256(signature_data.encode()).hexdigest()
+    
+    # Compare signatures
+    return signature == expected_signature
 def verify_document_signature(document_type, document_id, expires, signature):
     """Verify the signature for secure document download"""
     import hashlib
