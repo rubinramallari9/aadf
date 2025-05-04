@@ -14,7 +14,7 @@ interface ReportGeneratorModalProps {
   onGenerate: (data: ReportGenerationData) => Promise<void>;
 }
 
-interface ReportGenerationData {
+export interface ReportGenerationData {
   tender_id: number;
   report_type: string;
   include_attachments?: boolean;
@@ -152,7 +152,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: type === 'select-one' && name === 'tender_id' ? parseInt(value) : value
+        [name]: name === 'tender_id' ? Number(value) : value
       }));
     }
   };
@@ -160,7 +160,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.tender_id === 0) {
+    if (!formData.tender_id || formData.tender_id === 0) {
       setError('Please select a tender');
       return;
     }
@@ -168,11 +168,27 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({
     try {
       setLoading(true);
       setError(null);
-      await onGenerate(formData);
+      
+      // Ensure the form data is properly formatted before submission
+      const submissionData: ReportGenerationData = {
+        ...formData,
+        tender_id: Number(formData.tender_id), // Ensure tender_id is a number
+        report_type: formData.report_type || 'tender_commission',
+        // Only include date_range if both from and to values are provided
+        date_range: (formData.date_range?.from && formData.date_range?.to) 
+          ? formData.date_range 
+          : undefined,
+        include_attachments: Boolean(formData.include_attachments),
+        include_ai_analysis: Boolean(formData.include_ai_analysis)
+      };
+      
+      console.log("Submitting report generation with data:", submissionData);
+      
+      await onGenerate(submissionData);
       onClose();
     } catch (err: any) {
       console.error('Error generating report:', err);
-      setError(err.message || 'Failed to generate report');
+      setError(err.message || 'Failed to generate report. Please check form data.');
     } finally {
       setLoading(false);
     }

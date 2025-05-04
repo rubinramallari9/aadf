@@ -97,32 +97,75 @@ export const reportsApi = {
   generateReport: async (data: ReportGenerationData) => {
     try {
       console.log("generateReport called with data:", data);
-      console.log("API endpoint:", API_ENDPOINTS.REPORTS.GENERATE);
+      
+      // Stringently validate all required fields
+      if (!data.tender_id || typeof data.tender_id !== 'number' || data.tender_id <= 0) {
+        throw new Error('Valid tender ID is required');
+      }
+      
+      // Ensure report_type is a valid non-empty string
+      if (!data.report_type || typeof data.report_type !== 'string') {
+        data.report_type = 'tender_commission';
+      }
+      
+      // Create a complete request object with defaults for optional fields 
+      const requestData = {
+        tender_id: data.tender_id,
+        report_type: data.report_type,
+        include_attachments: data.include_attachments !== undefined ? data.include_attachments : false,
+        include_ai_analysis: data.include_ai_analysis !== undefined ? data.include_ai_analysis : true,
+        date_range: data.date_range || undefined,
+        additional_notes: data.additional_notes || ''
+      };
+      
+      console.log("Sending request to API endpoint:", API_ENDPOINTS.REPORTS.GENERATE);
+      console.log("Request data:", JSON.stringify(requestData, null, 2)); // Pretty print JSON
+      
+      // Explicitly set Content-Type header
+      const headers = {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      };
       
       const response = await fetch(API_ENDPOINTS.REPORTS.GENERATE, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
+        headers: headers,
+        body: JSON.stringify(requestData),
       });
       
       console.log("Generate report response status:", response.status);
+      console.log("Response headers:", Object.fromEntries([...response.headers]));
       
+      // If response isn't successful, try to get error information
       if (!response.ok) {
         const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          console.error("API error response:", errorData);
-          throw new Error(errorData.error || 'Failed to generate report');
-        } else {
-          console.error("Non-JSON error response");
-          throw new Error('Failed to generate report - authentication may have failed');
+        let errorMessage = `Failed to generate report (Status: ${response.status})`;
+        
+        try {
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            console.error("API error response:", errorData);
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } else {
+            // Try to get text error
+            const errorText = await response.text();
+            console.error("API error text response:", errorText);
+            if (errorText && errorText.length < 500) {
+              errorMessage = `${errorMessage}: ${errorText}`;
+            }
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
         }
+        
+        throw new Error(errorMessage);
       }
       
+      // Process successful response
       const result = await response.json();
       console.log("Report generation result:", result);
       return result;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error in generateReport:", err);
       throw err;
     }
@@ -209,9 +252,27 @@ export const reportsApi = {
       console.log("Generate comparative report response status:", response.status);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API error response:", errorData);
-        throw new Error(errorData.error || 'Failed to generate comparative report');
+        let errorMessage = 'Failed to generate comparative report';
+        
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+            console.error("API error response:", errorData);
+          } else {
+            // Try to get text error
+            const errorText = await response.text();
+            console.error("API error text response:", errorText);
+            if (errorText && errorText.length < 500) {
+              errorMessage = `${errorMessage}: ${errorText}`;
+            }
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+        }
+        
+        throw new Error(errorMessage);
       }
       
       const result = await response.json();
@@ -238,9 +299,27 @@ export const reportsApi = {
       console.log("Generate vendor report response status:", response.status);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API error response:", errorData);
-        throw new Error(errorData.error || 'Failed to generate vendor report');
+        let errorMessage = 'Failed to generate vendor report';
+        
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+            console.error("API error response:", errorData);
+          } else {
+            // Try to get text error
+            const errorText = await response.text();
+            console.error("API error text response:", errorText);
+            if (errorText && errorText.length < 500) {
+              errorMessage = `${errorMessage}: ${errorText}`;
+            }
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+        }
+        
+        throw new Error(errorMessage);
       }
       
       const result = await response.json();
@@ -267,9 +346,27 @@ export const reportsApi = {
       console.log("Generate archive response status:", response.status);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API error response:", errorData);
-        throw new Error(errorData.error || 'Failed to generate archive');
+        let errorMessage = 'Failed to generate archive';
+        
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+            console.error("API error response:", errorData);
+          } else {
+            // Try to get text error
+            const errorText = await response.text();
+            console.error("API error text response:", errorText);
+            if (errorText && errorText.length < 500) {
+              errorMessage = `${errorMessage}: ${errorText}`;
+            }
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+        }
+        
+        throw new Error(errorMessage);
       }
       
       const result = await response.json();

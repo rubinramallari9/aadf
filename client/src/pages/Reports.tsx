@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { reportsApi } from '../api/reportsApi';
-import ReportGeneratorModal from '../components/reports/ReportGeneratorModal';
+import ReportGeneratorModal, { ReportGenerationData } from '../components/reports/ReportGeneratorModal';
 
 // Define the types for our report objects
 interface Report {
@@ -132,19 +132,31 @@ const Reports: React.FC = () => {
     }
   };
 
-  const handleReportGeneration = async (data: any) => {
+  const handleReportGeneration = async (data: ReportGenerationData) => {
     try {
       setGeneratingReport(true);
+      setError(null);
       
       // Add AI analysis flag to the request
       data.include_ai_analysis = isAiAnalysisEnabled;
       
-      await reportsApi.generateReport(data);
-      await fetchReports(); // Refresh the list
-      setShowGeneratorModal(false);
+      console.log("Generating report with data:", data);
+      
+      // Call the API with improved error handling
+      const result = await reportsApi.generateReport(data);
+      
+      if (result) {
+        // Success - refresh the reports list
+        await fetchReports();
+        setShowGeneratorModal(false);
+        
+        // Show temporary success message
+        setError("Report generated successfully");
+        setTimeout(() => setError(null), 3000);
+      }
     } catch (err: any) {
       console.error('Error generating report:', err);
-      setError(err.message || 'Failed to generate report');
+      setError(err.message || 'Failed to generate report. Please try again later.');
     } finally {
       setGeneratingReport(false);
     }
@@ -351,7 +363,7 @@ const Reports: React.FC = () => {
                 <span className="material-icons mr-2 text-sm">refresh</span>
                 Reset
               </button>
-                              <button
+              <button
                 onClick={applyFilters}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
@@ -403,13 +415,15 @@ const Reports: React.FC = () => {
         {/* Reports List */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-400 p-4">
+            <div className={`bg-${error.includes('successfully') ? 'green' : 'red'}-50 border-l-4 border-${error.includes('successfully') ? 'green' : 'red'}-400 p-4`}>
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <span className="material-icons text-red-400">error</span>
+                  <span className={`material-icons text-${error.includes('successfully') ? 'green' : 'red'}-400`}>
+                    {error.includes('successfully') ? 'check_circle' : 'error'}
+                  </span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
+                  <p className={`text-sm text-${error.includes('successfully') ? 'green' : 'red'}-700`}>{error}</p>
                 </div>
               </div>
             </div>

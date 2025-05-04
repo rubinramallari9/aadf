@@ -336,11 +336,12 @@ def analyze_offer_competitiveness(offer):
     
     # Calculate document completeness scores
     offer_docs = OfferDocument.objects.filter(offer=offer)
+    
     if offer_docs.exists():
         doc_scores = []
         for doc in offer_docs:
             score, _ = analyze_document_completeness(doc)
-            doc_scores.append(score)
+            doc_scores.append(score) 
         
         avg_doc_score = sum(doc_scores) / len(doc_scores)
         if avg_doc_score > 80:
