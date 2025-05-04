@@ -1,0 +1,29 @@
+class DocumentDownloadView(APIView):
+    """Handle secure file downloads"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, document_type, document_id):
+        # Check for secure download if using a signed URL
+        expires = request.query_params.get('expires')
+        signature = request.query_params.get('signature')
+        
+        if expires and signature:
+            # Verify the signature
+            if not verify_document_signature(document_type, document_id, expires, signature):
+                return Response(
+                    {'error': 'Invalid or expired download link'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+                
+            # If signature is valid, allow access without authentication check
+            authenticated_by_signature = True
+        else:
+            # If no signature provided, require authentication
+            if not request.user.is_authenticated:
+                return Response(
+                    {'error': 'Authentication required'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            authenticated_by_signature = False
+            
+        # Rest of the download logic...
