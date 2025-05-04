@@ -1,5 +1,6 @@
 // client/src/api/reportsApi.ts
-import { API_ENDPOINTS, getAuthHeaders, API_BASE_URL } from './config';
+import { API_ENDPOINTS, getAuthHeaders } from './config';
+import { documentApi } from './DocumentApi';
 
 export interface ReportGenerationData {
   tender_id: number;
@@ -27,6 +28,23 @@ export interface Report {
   created_at: string;
 }
 
+// Helper function to check if the response is HTML instead of JSON
+const isHtmlResponse = async (response: Response): Promise<boolean> => {
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('text/html')) {
+    return true;
+  }
+  
+  // Try to peek at the response
+  const clonedResponse = response.clone();
+  try {
+    const text = await clonedResponse.text();
+    return text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html');
+  } catch (error) {
+    return false;
+  }
+};
+
 export const reportsApi = {
   getAll: async (params = {}) => {
     try {
@@ -42,7 +60,16 @@ export const reportsApi = {
       
       console.log("Reports API response status:", response.status);
       
+      // Check if we got HTML instead of JSON (auth issue)
+      if (await isHtmlResponse(response)) {
+        throw new Error('Received HTML response. Your session may have expired.');
+      }
+      
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
@@ -73,7 +100,16 @@ export const reportsApi = {
         headers: getAuthHeaders(),
       });
       
+      // Check if we got HTML instead of JSON (auth issue)
+      if (await isHtmlResponse(response)) {
+        throw new Error('Received HTML response. Your session may have expired.');
+      }
+      
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
@@ -136,8 +172,17 @@ export const reportsApi = {
       console.log("Generate report response status:", response.status);
       console.log("Response headers:", Object.fromEntries([...response.headers]));
       
+      // Check if we got HTML instead of JSON (auth issue)
+      if (await isHtmlResponse(response)) {
+        throw new Error('Received HTML response. Your session may have expired.');
+      }
+      
       // If response isn't successful, try to get error information
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
         const contentType = response.headers.get('content-type');
         let errorMessage = `Failed to generate report (Status: ${response.status})`;
         
@@ -171,16 +216,13 @@ export const reportsApi = {
     }
   },
   
+  // Use secure download link method for downloading reports
   downloadReport: async (id: number) => {
     try {
       console.log("downloadReport called with ID:", id);
-      // Open the download URL in a new tab/window
-      const token = localStorage.getItem('token');
-      const downloadUrl = `${API_ENDPOINTS.REPORTS.DOWNLOAD(id)}?token=${token}`;
-      console.log("Opening download URL:", downloadUrl);
-      window.open(downloadUrl, '_blank');
       
-      return true;
+      // Use the secure download link functionality
+      return await documentApi.downloadWithSecureLink('report', id);
     } catch (err) {
       console.error("Error in downloadReport:", err);
       throw err;
@@ -200,7 +242,16 @@ export const reportsApi = {
       
       console.log("Report types response status:", response.status);
       
+      // Check if we got HTML instead of JSON (auth issue)
+      if (await isHtmlResponse(response)) {
+        throw new Error('Received HTML response. Your session may have expired.');
+      }
+      
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
         const errorData = await response.json();
         console.error("API error response:", errorData);
         throw new Error(errorData.error || 'Failed to get report types');
@@ -251,7 +302,16 @@ export const reportsApi = {
       
       console.log("Generate comparative report response status:", response.status);
       
+      // Check if we got HTML instead of JSON (auth issue)
+      if (await isHtmlResponse(response)) {
+        throw new Error('Received HTML response. Your session may have expired.');
+      }
+      
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
         let errorMessage = 'Failed to generate comparative report';
         
         try {
@@ -298,7 +358,16 @@ export const reportsApi = {
       
       console.log("Generate vendor report response status:", response.status);
       
+      // Check if we got HTML instead of JSON (auth issue)
+      if (await isHtmlResponse(response)) {
+        throw new Error('Received HTML response. Your session may have expired.');
+      }
+      
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
         let errorMessage = 'Failed to generate vendor report';
         
         try {
@@ -345,7 +414,16 @@ export const reportsApi = {
       
       console.log("Generate archive response status:", response.status);
       
+      // Check if we got HTML instead of JSON (auth issue)
+      if (await isHtmlResponse(response)) {
+        throw new Error('Received HTML response. Your session may have expired.');
+      }
+      
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
         let errorMessage = 'Failed to generate archive';
         
         try {

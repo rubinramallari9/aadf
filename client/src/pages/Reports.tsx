@@ -1,10 +1,11 @@
 // client/src/pages/Reports.tsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { reportsApi } from '../api/reportsApi';
 import ReportGeneratorModal, { ReportGenerationData } from '../components/reports/ReportGeneratorModal';
+import SecureDocumentDownloader from '../components/documents/SecureDocumentDownloader';
 
 // Define the types for our report objects
 interface Report {
@@ -36,13 +37,13 @@ interface ReportType {
 }
 
 const Reports: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated, token } = useAuth();
+  const navigate = useNavigate();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showGeneratorModal, setShowGeneratorModal] = useState<boolean>(false);
-  const [showComparativeModal, setShowComparativeModal] = useState<boolean>(false);
-  const [showVendorAnalysisModal, setShowVendorAnalysisModal] = useState<boolean>(false);
   const [filters, setFilters] = useState<ReportFilters>({
     reportType: '',
     dateFrom: '',
@@ -53,21 +54,34 @@ const Reports: React.FC = () => {
   const [selectedReportType, setSelectedReportType] = useState<string>('tender_commission');
   const [isAiAnalysisEnabled, setIsAiAnalysisEnabled] = useState<boolean>(true);
   const [generatingReport, setGeneratingReport] = useState<boolean>(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  // Check authentication on page load
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      navigate('/login', { state: { from: '/reports', message: 'Please log in to view reports' } });
+    }
+  }, [isAuthenticated, token, navigate]);
 
   // Get available report types
   const fetchReportTypes = async () => {
     try {
       const types = await reportsApi.getReportTypes();
       setReportTypes(types);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching report types:', err);
+      if (err.message?.includes('authentication') || err.message?.includes('HTML')) {
+        setError('Session expired. Please log in again.');
+      }
     }
   };
 
   useEffect(() => {
-    fetchReports();
-    fetchReportTypes();
-  }, []);
+    if (isAuthenticated) {
+      fetchReports();
+      fetchReportTypes();
+    }
+  }, [isAuthenticated]);
 
   const fetchReports = async () => {
     try {
@@ -92,7 +106,11 @@ const Reports: React.FC = () => {
       setReports(reportsData);
     } catch (err: any) {
       console.error('Error fetching reports:', err);
-      setError(err.message || 'Failed to load reports');
+      if (err.message?.includes('authentication') || err.message?.includes('HTML')) {
+        setError('Session expired. Please log in again.');
+      } else {
+        setError(err.message || 'Failed to load reports');
+      }
     } finally {
       setLoading(false);
     }
@@ -107,9 +125,7 @@ const Reports: React.FC = () => {
   };
 
   const applyFilters = () => {
-    // Implement filters application logic
-    // This would typically involve API calls with filter parameters
-    // For now, we'll just simulate filtering on the client side
+    // For now, just filter client-side
     fetchReports();
   };
 
@@ -123,12 +139,26 @@ const Reports: React.FC = () => {
     fetchReports();
   };
 
-  const downloadReport = async (reportId: number) => {
-    try {
-      await reportsApi.downloadReport(reportId);
-    } catch (error) {
-      console.error('Error downloading report:', error);
-      alert('Failed to download report');
+  // Handle download success
+  const handleDownloadSuccess = () => {
+    setSuccessMessage('Download started successfully!');
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  // Handle download error
+  const handleDownloadError = (err: Error) => {
+    console.error('Download error:', err);
+    
+    if (err.message.includes('authentication') || err.message.includes('session') || err.message.includes('HTML')) {
+      setDownloadError('Authentication issue. Please try logging in again.');
+      
+      // Auto redirect to login after a delay
+      setTimeout(() => {
+        navigate('/login', { state: { from: '/reports', message: 'Your session has expired. Please log in again.' } });
+      }, 3000);
+    } else {
+      setDownloadError(`Download failed: ${err.message}`);
+      setTimeout(() => setDownloadError(null), 5000);
     }
   };
 
@@ -151,55 +181,22 @@ const Reports: React.FC = () => {
         setShowGeneratorModal(false);
         
         // Show temporary success message
-        setError("Report generated successfully");
-        setTimeout(() => setError(null), 3000);
+        setSuccessMessage("Report generated successfully");
+        setTimeout(() => setSuccessMessage(null), 3000);
       }
     } catch (err: any) {
       console.error('Error generating report:', err);
-      setError(err.message || 'Failed to generate report. Please try again later.');
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
-
-  const handleComparativeReport = async (data: any) => {
-    try {
-      setGeneratingReport(true);
-      data.include_ai_analysis = isAiAnalysisEnabled;
-      await reportsApi.generateComparativeReport(data);
-      await fetchReports();
-      setShowComparativeModal(false);
-    } catch (err: any) {
-      console.error('Error generating comparative report:', err);
-      setError(err.message || 'Failed to generate comparative report');
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
-
-  const handleVendorAnalysisReport = async (data: any) => {
-    try {
-      setGeneratingReport(true);
-      data.include_ai_analysis = isAiAnalysisEnabled;
-      await reportsApi.generateVendorReport(data);
-      await fetchReports();
-      setShowVendorAnalysisModal(false);
-    } catch (err: any) {
-      console.error('Error generating vendor analysis:', err);
-      setError(err.message || 'Failed to generate vendor analysis report');
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
-
-  const handleArchiveGeneration = async (tenderId: number) => {
-    try {
-      setGeneratingReport(true);
-      await reportsApi.generateArchive({ tender_id: tenderId, include_offers: true });
-      await fetchReports();
-    } catch (err: any) {
-      console.error('Error generating archive:', err);
-      setError(err.message || 'Failed to generate archive');
+      
+      if (err.message?.includes('authentication') || err.message?.includes('HTML')) {
+        setError('Session expired. Please log in again.');
+        
+        // Auto redirect to login after a delay
+        setTimeout(() => {
+          navigate('/login', { state: { from: '/reports', message: 'Your session has expired. Please log in again.' } });
+        }, 3000);
+      } else {
+        setError(err.message || 'Failed to generate report. Please try again later.');
+      }
     } finally {
       setGeneratingReport(false);
     }
@@ -412,23 +409,54 @@ const Reports: React.FC = () => {
           </div>
         </div>
 
-        {/* Reports List */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {error && (
-            <div className={`bg-${error.includes('successfully') ? 'green' : 'red'}-50 border-l-4 border-${error.includes('successfully') ? 'green' : 'red'}-400 p-4`}>
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <span className={`material-icons text-${error.includes('successfully') ? 'green' : 'red'}-400`}>
-                    {error.includes('successfully') ? 'check_circle' : 'error'}
-                  </span>
-                </div>
-                <div className="ml-3">
-                  <p className={`text-sm text-${error.includes('successfully') ? 'green' : 'red'}-700`}>{error}</p>
-                </div>
+        {/* Status Messages */}
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
+        {successMessage && (
+          <div className="bg-green-50 border-l-4 border-green-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-green-700">{successMessage}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {downloadError && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{downloadError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reports List */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
           {filteredReports.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -489,17 +517,21 @@ const Reports: React.FC = () => {
                         {new Date(report.created_at).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button 
-                          onClick={() => downloadReport(report.id)}
-                          className="inline-flex items-center text-blue-600 hover:text-blue-900 mr-3"
-                        >
-                          <span className="material-icons mr-1 text-sm">file_download</span>
-                          Download
-                        </button>
+                        {/* Using SecureDocumentDownloader component for report downloads */}
+                        <SecureDocumentDownloader 
+                          documentType="report" 
+                          documentId={report.id}
+                          buttonText="Download"
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          size="small"
+                          onSuccess={handleDownloadSuccess}
+                          onError={handleDownloadError}
+                        />
+                        
                         {report.report_type === 'archive' && (
                           <button 
-                            onClick={() => alert('Opening archive...')}
-                            className="inline-flex items-center text-green-600 hover:text-green-900"
+                            onClick={() => alert('Opening archive view...')}
+                            className="inline-flex items-center ml-2 px-3 py-1 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                           >
                             <span className="material-icons mr-1 text-sm">folder_open</span>
                             View

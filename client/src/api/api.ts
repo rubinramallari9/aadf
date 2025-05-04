@@ -650,7 +650,7 @@ export const documentApi = {
     } catch (error) {
       console.error('Error downloading document:', error);
       throw error;
-    },
+    }
   },
   // Tender documents
   uploadTenderDocument: async (tenderId: number, file: File) => {

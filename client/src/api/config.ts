@@ -11,7 +11,8 @@ export const API_ENDPOINTS = {
     REGISTER: `${API_BASE_URL}/api/auth/register/`,
     CHANGE_PASSWORD: `${API_BASE_URL}/api/auth/change-password/`,
     PROFILE: `${API_BASE_URL}/api/auth/profile/`,
-    ADMIN_CREATE_USER: `${API_BASE_URL}/api/auth/admin-create-user/`, 
+    ADMIN_CREATE_USER: `${API_BASE_URL}/api/auth/admin-create-user/`,
+    REFRESH_TOKEN: `${API_BASE_URL}/api/auth/refresh-token/`, // Add this if your backend supports token refresh
   },
   TENDERS: {
     BASE: `${API_BASE_URL}/api/tenders/`,
@@ -39,12 +40,6 @@ export const API_ENDPOINTS = {
       BASE: `${API_BASE_URL}/api/tender-documents/`,
       DETAIL: (id: number) => `${API_BASE_URL}/api/tender-documents/${id}/`,
       BY_TENDER: (tenderId: number) => `${API_BASE_URL}/api/tender-documents/?tender_id=${tenderId}`,
-
-      SECURE_DOWNLOAD: {
-        REPORT: (id: number) => `${API_BASE_URL}/api/reports/${id}/secure-download-link/`,
-        TENDER: (id: number) => `${API_BASE_URL}/api/tender-documents/${id}/secure-download-link/`,
-        OFFER: (id: number) => `${API_BASE_URL}/api/offer-documents/${id}/secure-download-link/`,
-      },
     },
     OFFER: {
       BASE: `${API_BASE_URL}/api/offer-documents/`,
@@ -53,6 +48,11 @@ export const API_ENDPOINTS = {
     },
     DOWNLOAD: (documentType: string, documentId: number) => 
       `${API_BASE_URL}/api/download/${documentType}/${documentId}/`,
+    SECURE_DOWNLOAD: {
+      REPORT: (id: number) => `${API_BASE_URL}/api/reports/${id}/secure-download-link/`,
+      TENDER: (id: number) => `${API_BASE_URL}/api/tender-documents/${id}/secure-download-link/`,
+      OFFER: (id: number) => `${API_BASE_URL}/api/offer-documents/${id}/secure-download-link/`
+    }
   },
   EVALUATIONS: {
     BASE: `${API_BASE_URL}/api/evaluations/`,
@@ -119,17 +119,30 @@ export const API_ENDPOINTS = {
   },
 };
 
-// HTTP request headers
+// HTTP request headers with token checking
 export const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
+  
+  // Check if token exists
+  if (!token) {
+    console.warn('No authentication token found');
+  }
+  
   return {
     'Content-Type': 'application/json',
     'Authorization': token ? `Token ${token}` : '',
   };
 };
 
+// For file uploads (multipart/form-data)
 export const getMultipartHeaders = () => {
   const token = localStorage.getItem('token');
+  
+  // Check if token exists
+  if (!token) {
+    console.warn('No authentication token found for file upload');
+  }
+  
   return {
     'Authorization': token ? `Token ${token}` : '',
   };
