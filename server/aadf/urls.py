@@ -57,6 +57,15 @@ urlpatterns = [
     path('users/<int:user_id>/', UserManagementView.as_view(), name='user-detail'),
     path('users/<int:user_id>/reset-password/', UserManagementView.as_view(), name='user-reset-password'),
     
+    # AI-enhanced endpoints
+    path('ai/analyze-tender/<int:tender_id>/', TenderViewSet.as_view({'get': 'analyze_tender'}), name='ai-analyze-tender'),
+    path('ai/analyze-offer/<int:offer_id>/', OfferViewSet.as_view({'get': 'analyze_offer'}), name='ai-analyze-offer'),
+    path('ai/evaluate-suggestions/<int:offer_id>/', EvaluationViewSet.as_view({'get': 'ai_recommend_evaluations'}), name='ai-evaluate-suggestions'),
+    path('ai/vendor-analysis/<int:pk>/', VendorCompanyViewSet.as_view({'get': 'ai_performance_analysis'}), name='ai-vendor-analysis'),
+    path('ai/evaluation-anomalies/<int:tender_id>/', EvaluationViewSet.as_view({'get': 'detect_evaluation_anomalies'}), name='ai-evaluation-anomalies'),
+    path('ai/analytics-report/<int:tender_id>/', ReportViewSet.as_view({'post': 'generate_ai_enhanced_report'}), name='ai-analytics-report'),
+    path('ai/vendor-team-analysis/<int:pk>/', VendorCompanyViewSet.as_view({'get': 'team_analysis'}), name='ai-vendor-team-analysis'),
+    
     # DRF browsable API authentication
     path('api-auth/', include('rest_framework.urls')),
 ]

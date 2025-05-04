@@ -2009,7 +2009,7 @@ class AIAnalyzer:
                 "min_price": min_price,
                 "max_price": max_price,
                 "price_range": price_range,
-                "price_range_percentage": price_range_percentage
+                "price_range_percentage": (price_range / min_price) * 100 if min_price > 0 else 0
             },
             "statistical_analysis": {
                 "variance": variance,
@@ -3003,7 +3003,7 @@ class AIAnalyzer:
                 "min_price": min_price,
                 "max_price": max_price,
                 "price_range": price_range,
-                "price_range_percentage": price_range_percentage
+                "price_range_percentage": (price_range / min_price) * 100 if min_price > 0 else 0
             },
             "price_clusters": clusters,
             "benchmark_assessment": benchmark_assessment if estimated_value else None
