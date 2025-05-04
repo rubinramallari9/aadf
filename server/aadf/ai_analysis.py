@@ -2989,4 +2989,882 @@ class AIAnalyzer:
             benchmark_assessment = {
                 "estimated_value": estimated_value,
                 "average_deviation": avg_deviation,
-                "market_assessment": 
+                "market_assessment": "Competitive" if abs(avg_deviation) < 10 else
+                                    "Somewhat competitive" if abs(avg_deviation) < 20 else
+                                    "Not competitive"
+            }
+        
+        return {
+            "analysis_performed": True,
+            "offers_analyzed": len(valid_offers),
+            "basic_statistics": {
+                "average_price": avg_price,
+                "median_price": median_price,
+                "min_price": min_price,
+                "max_price": max_price,
+                "price_range": price_range,
+                "price_range_percentage": price_range_percentage
+            },
+            "price_clusters": clusters,
+            "benchmark_assessment": benchmark_assessment if estimated_value else None
+        }
+
+    def _analyze_price_details(self, offers):
+        """Analyze prices in detail for financial reporting"""
+        valid_offers = [o for o in offers if o.price is not None]
+        
+        if not valid_offers:
+            return {
+                "analysis_performed": False,
+                "reason": "No offers with valid prices"
+            }
+            
+        # Extract prices
+        prices = [float(o.price) for o in valid_offers]
+        
+        # Basic statistics
+        avg_price = sum(prices) / len(prices)
+        median_price = sorted(prices)[len(prices) // 2]
+        min_price = min(prices)
+        max_price = max(prices)
+        price_range = max_price - min_price
+        
+        # Variance and standard deviation
+        variance = sum((p - avg_price) ** 2 for p in prices) / len(prices)
+        std_dev = math.sqrt(variance)
+        
+        # Prepare offer details
+        offer_details = []
+        for offer in valid_offers:
+            price = float(offer.price)
+            deviation = ((price - avg_price) / avg_price) * 100 if avg_price > 0 else 0
+            
+            offer_details.append({
+                "offer_id": offer.id,
+                "vendor_name": offer.vendor.name,
+                "price": price,
+                "deviation_from_avg": deviation,
+                "deviation_description": "Average" if abs(deviation) < 10 else
+                                         "Above average" if deviation > 0 else
+                                         "Below average",
+                "price_rank": sorted(prices).index(price) + 1,
+                "percentile": sorted(prices).index(price) / len(prices) * 100
+            })
+            
+        # Sort by price
+        offer_details.sort(key=lambda x: x["price"])
+        
+        # Check for outliers
+        outliers = []
+        if std_dev > 0:
+            for offer in offer_details:
+                z_score = abs(offer["price"] - avg_price) / std_dev
+                if z_score > 2:
+                    outliers.append({
+                        "offer_id": offer["offer_id"],
+                        "vendor_name": offer["vendor_name"],
+                        "price": offer["price"],
+                        "z_score": z_score,
+                        "deviation_percentage": offer["deviation_from_avg"]
+                    })
+        
+        return {
+            "analysis_performed": True,
+            "basic_statistics": {
+                "average_price": avg_price,
+                "median_price": median_price,
+                "min_price": min_price,
+                "max_price": max_price,
+                "std_deviation": std_dev,
+                "coefficient_of_variation": (std_dev / avg_price) * 100 if avg_price > 0 else 0
+            },
+            "offer_details": offer_details,
+            "outliers": outliers
+        }
+    
+    def _market_price_comparison(self, tender, offers):
+        """Compare tender prices with market estimates"""
+        valid_offers = [o for o in offers if o.price is not None]
+        
+        if not valid_offers:
+            return {
+                "analysis_performed": False,
+                "reason": "No offers with valid prices"
+            }
+            
+        # Check if tender has estimated value
+        estimated_value = float(tender.estimated_value) if tender.estimated_value else None
+        
+        if not estimated_value:
+            return {
+                "analysis_performed": False,
+                "reason": "No estimated value available for comparison"
+            }
+            
+        # Extract prices
+        prices = [float(o.price) for o in valid_offers]
+        avg_price = sum(prices) / len(prices)
+        
+        # Calculate deviation from estimate
+        market_deviation = ((avg_price - estimated_value) / estimated_value) * 100
+        
+        # Determine if prices are within expected range
+        offers_within_range = sum(1 for p in prices if abs((p - estimated_value) / estimated_value) <= 0.15)
+        percentage_within_range = (offers_within_range / len(prices)) * 100
+        
+        # Analyze if the estimated value was accurate
+        if abs(market_deviation) < 10:
+            estimate_accuracy = "Highly accurate"
+        elif abs(market_deviation) < 20:
+            estimate_accuracy = "Moderately accurate"
+        else:
+            estimate_accuracy = "Not accurate"
+            
+        # Overall market assessment
+        if market_deviation < -15:
+            market_assessment = "Prices significantly below estimate (competitive market)"
+        elif market_deviation < 0:
+            market_assessment = "Prices slightly below estimate (healthy competition)"
+        elif market_deviation < 15:
+            market_assessment = "Prices in line with estimate (expected market)"
+        else:
+            market_assessment = "Prices significantly above estimate (potential market issues)"
+            
+        return {
+            "analysis_performed": True,
+            "estimated_value": estimated_value,
+            "average_price": avg_price,
+            "market_deviation": market_deviation,
+            "offers_within_range": offers_within_range,
+            "percentage_within_range": percentage_within_range,
+            "estimate_accuracy": estimate_accuracy,
+            "market_assessment": market_assessment
+        }
+    
+    def _calculate_value_for_money(self, offers):
+        """Calculate value for money metrics for offers"""
+        valid_offers = [o for o in offers if o.price is not None and o.technical_score is not None]
+        
+        if not valid_offers:
+            return {
+                "analysis_performed": False,
+                "reason": "No offers with both price and technical score"
+            }
+            
+        # Calculate value for money for each offer (technical score / price)
+        vfm_data = []
+        for offer in valid_offers:
+            price = float(offer.price)
+            technical_score = float(offer.technical_score)
+            
+            # Avoid division by zero
+            if price > 0:
+                vfm = technical_score / price * 1000  # Normalized to a more readable scale
+            else:
+                vfm = 0
+                
+            vfm_data.append({
+                "offer_id": offer.id,
+                "vendor_name": offer.vendor.name,
+                "price": price,
+                "technical_score": technical_score,
+                "value_for_money": vfm
+            })
+            
+        # Sort by value for money (descending)
+        vfm_data.sort(key=lambda x: x["value_for_money"], reverse=True)
+        
+        # Calculate average VFM
+        avg_vfm = sum(item["value_for_money"] for item in vfm_data) / len(vfm_data)
+        
+        # Identify best value offers (top 25%)
+        best_value_threshold = len(vfm_data) // 4
+        best_value_offers = vfm_data[:max(1, best_value_threshold)]
+        
+        return {
+            "analysis_performed": True,
+            "offer_vfm_data": vfm_data,
+            "average_vfm": avg_vfm,
+            "best_value_offers": best_value_offers
+        }
+    
+    def _budgetary_assessment(self, tender, offers):
+        """Assess budgetary implications of tender"""
+        valid_offers = [o for o in offers if o.price is not None]
+        
+        if not valid_offers:
+            return {
+                "analysis_performed": False,
+                "reason": "No offers with valid prices"
+            }
+            
+        # Check if tender has estimated value
+        estimated_value = float(tender.estimated_value) if tender.estimated_value else None
+        
+        # Basic statistics
+        prices = [float(o.price) for o in valid_offers]
+        min_price = min(prices)
+        max_price = max(prices)
+        avg_price = sum(prices) / len(prices)
+        
+        # Prepare assessment
+        assessment = {
+            "price_range": max_price - min_price,
+            "average_price": avg_price,
+            "total_value": sum(prices)
+        }
+        
+        if estimated_value:
+            assessment["estimated_value"] = estimated_value
+            assessment["budget_variance"] = avg_price - estimated_value
+            assessment["budget_variance_percentage"] = ((avg_price - estimated_value) / estimated_value) * 100
+            
+            # Budget assessment
+            if avg_price <= estimated_value * 0.85:
+                assessment["budget_assessment"] = "Significantly under budget"
+            elif avg_price <= estimated_value:
+                assessment["budget_assessment"] = "Within budget"
+            elif avg_price <= estimated_value * 1.15:
+                assessment["budget_assessment"] = "Slightly over budget"
+            else:
+                assessment["budget_assessment"] = "Significantly over budget"
+        
+        return {
+            "analysis_performed": True,
+            "assessment": assessment
+        }
+    
+    def _generate_financial_recommendations(self, tender, offers):
+        """Generate financial recommendations based on analysis"""
+        valid_offers = [o for o in offers if o.price is not None]
+        
+        if not valid_offers:
+            return []
+            
+        recommendations = []
+        
+        # Extract prices
+        prices = [float(o.price) for o in valid_offers]
+        avg_price = sum(prices) / len(prices)
+        min_price = min(prices)
+        max_price = max(prices)
+        price_range_percentage = ((max_price - min_price) / min_price) * 100 if min_price > 0 else 0
+        
+        # Check if tender has estimated value
+        estimated_value = float(tender.estimated_value) if tender.estimated_value else None
+        
+        # Recommendation 1: High price variation
+        if price_range_percentage > 40:
+            recommendations.append({
+                "type": "warning",
+                "issue": "High price variation",
+                "description": f"Price spread is {price_range_percentage:.1f}%, indicating significant variation in offers.",
+                "suggested_action": "Verify that all vendors understood requirements correctly and are offering comparable solutions."
+            })
+            
+        # Recommendation 2: Prices significantly above estimate
+        if estimated_value and avg_price > estimated_value * 1.2:
+            recommendations.append({
+                "type": "warning",
+                "issue": "Prices above estimate",
+                "description": f"Average price is {((avg_price - estimated_value) / estimated_value) * 100:.1f}% above estimated value.",
+                "suggested_action": "Review requirements to ensure they are not overly restrictive, or consider adjusting the budget."
+            })
+            
+        # Recommendation 3: Lowest price outlier
+        if len(prices) >= 3:
+            second_lowest = sorted(prices)[1]
+            if min_price < second_lowest * 0.7:
+                recommendations.append({
+                    "type": "warning",
+                    "issue": "Unusually low price",
+                    "description": "The lowest price is significantly below other offers.",
+                    "suggested_action": "Verify that the lowest offer meets all requirements and can be delivered at the quoted price."
+                })
+                
+        # Recommendation 4: Consider value for money
+        if any(o.technical_score is not None for o in valid_offers):
+            recommendations.append({
+                "type": "info",
+                "issue": "Consider value for money",
+                "description": "Some offers may provide better value despite higher prices.",
+                "suggested_action": "Evaluate technical scores alongside prices for a holistic assessment."
+            })
+            
+        return recommendations
+    
+    def _analyze_vendor_time_performance(self, vendor, offers):
+        """Analyze vendor performance over time"""
+        if not offers.exists():
+            return {
+                "analysis_performed": False,
+                "reason": "No offers available for analysis"
+            }
+            
+        # Group offers by year and month
+        time_series = {}
+        for offer in offers.order_by('created_at'):
+            year_month = offer.created_at.strftime('%Y-%m')
+            
+            if year_month not in time_series:
+                time_series[year_month] = {
+                    'total': 0,
+                    'awarded': 0,
+                    'submitted': 0,
+                    'rejected': 0,
+                    'scores': []
+                }
+                
+            time_series[year_month]['total'] += 1
+            
+            if offer.status == 'awarded':
+                time_series[year_month]['awarded'] += 1
+            elif offer.status == 'submitted' or offer.status == 'evaluated':
+                time_series[year_month]['submitted'] += 1
+            elif offer.status == 'rejected':
+                time_series[year_month]['rejected'] += 1
+                
+            if offer.total_score is not None:
+                time_series[year_month]['scores'].append(float(offer.total_score))
+                
+        # Calculate metrics for each period
+        performance_trend = []
+        for year_month, data in sorted(time_series.items()):
+            avg_score = sum(data['scores']) / len(data['scores']) if data['scores'] else None
+            success_rate = data['awarded'] / (data['awarded'] + data['rejected']) * 100 if (data['awarded'] + data['rejected']) > 0 else None
+            
+            performance_trend.append({
+                'period': year_month,
+                'total_offers': data['total'],
+                'awarded': data['awarded'],
+                'submitted': data['submitted'],
+                'rejected': data['rejected'],
+                'avg_score': avg_score,
+                'success_rate': success_rate
+            })
+            
+        # Calculate trend indicators
+        if len(performance_trend) >= 2:
+            # Analyze last two periods
+            current = performance_trend[-1]
+            previous = performance_trend[-2]
+            
+            trend_indicators = {
+                'success_rate_trend': 'increasing' if (current.get('success_rate') or 0) > (previous.get('success_rate') or 0) else 
+                                      'decreasing' if (current.get('success_rate') or 0) < (previous.get('success_rate') or 0) else
+                                      'stable',
+                'avg_score_trend': 'increasing' if (current.get('avg_score') or 0) > (previous.get('avg_score') or 0) else
+                                   'decreasing' if (current.get('avg_score') or 0) < (previous.get('avg_score') or 0) else
+                                   'stable',
+                'activity_trend': 'increasing' if current['total_offers'] > previous['total_offers'] else
+                                 'decreasing' if current['total_offers'] < previous['total_offers'] else
+                                 'stable'
+            }
+        else:
+            trend_indicators = {
+                'success_rate_trend': 'not enough data',
+                'avg_score_trend': 'not enough data',
+                'activity_trend': 'not enough data'
+            }
+            
+        return {
+            'analysis_performed': True,
+            'performance_trend': performance_trend,
+            'trend_indicators': trend_indicators
+        }
+    
+    def _analyze_vendor_competitiveness(self, vendor, offers):
+        """Analyze how competitive a vendor is compared to others"""
+        if not offers.exists():
+            return {
+                "analysis_performed": False,
+                "reason": "No offers available for analysis"
+            }
+            
+        # Get tenders where this vendor has participated
+        tenders_ids = offers.values_list('tender_id', flat=True).distinct()
+        
+        # For each tender, compare this vendor's offer with others
+        competitive_analysis = []
+        
+        for tender_id in tenders_ids:
+            try:
+                # Get this vendor's offer for this tender
+                vendor_offer = offers.filter(tender_id=tender_id).first()
+                
+                if not vendor_offer:
+                    continue
+                    
+                # Get all other offers for this tender
+                other_offers = Offer.objects.filter(tender_id=tender_id).exclude(vendor=vendor)
+                
+                if not other_offers.exists():
+                    continue
+                    
+                # Compare prices if available
+                price_comparison = None
+                if vendor_offer.price is not None:
+                    other_prices = [float(o.price) for o in other_offers if o.price is not None]
+                    
+                    if other_prices:
+                        avg_other_price = sum(other_prices) / len(other_prices)
+                        price_diff = float(vendor_offer.price) - avg_other_price
+                        price_diff_percent = (price_diff / avg_other_price) * 100
+                        
+                        price_comparison = {
+                            'vendor_price': float(vendor_offer.price),
+                            'avg_other_price': avg_other_price,
+                            'price_difference': price_diff,
+                            'price_difference_percent': price_diff_percent,
+                            'price_competitiveness': 'Very competitive' if price_diff_percent <= -10 else
+                                                     'Competitive' if price_diff_percent <= 0 else
+                                                     'Less competitive' if price_diff_percent <= 10 else
+                                                     'Not competitive'
+                        }
+                        
+                # Compare scores if available
+                score_comparison = None
+                if vendor_offer.total_score is not None:
+                    other_scores = [float(o.total_score) for o in other_offers if o.total_score is not None]
+                    
+                    if other_scores:
+                        avg_other_score = sum(other_scores) / len(other_scores)
+                        score_diff = float(vendor_offer.total_score) - avg_other_score
+                        
+                        score_comparison = {
+                            'vendor_score': float(vendor_offer.total_score),
+                            'avg_other_score': avg_other_score,
+                            'score_difference': score_diff,
+                            'score_competitiveness': 'Excellent' if score_diff >= 10 else
+                                                    'Good' if score_diff >= 0 else
+                                                    'Below average' if score_diff >= -10 else
+                                                    'Poor'
+                        }
+                        
+                # Add to competitive analysis
+                if price_comparison or score_comparison:
+                    tender = Tender.objects.get(id=tender_id)
+                    
+                    competitive_analysis.append({
+                        'tender_id': tender_id,
+                        'tender_reference': tender.reference_number,
+                        'tender_title': tender.title,
+                        'tender_status': tender.status,
+                        'offer_status': vendor_offer.status,
+                        'price_comparison': price_comparison,
+                        'score_comparison': score_comparison,
+                        'submitted_at': vendor_offer.submitted_at
+                    })
+                    
+            except Exception as e:
+                logger.error(f"Error in competitive analysis for tender {tender_id}: {str(e)}")
+                continue
+                
+        # Sort by submission date (most recent first)
+        competitive_analysis.sort(key=lambda x: x.get('submitted_at') or timezone.now(), reverse=True)
+        
+        # Calculate overall competitiveness
+        if competitive_analysis:
+            price_ratings = [c['price_comparison']['price_competitiveness'] for c in competitive_analysis 
+                           if c.get('price_comparison')]
+                           
+            score_ratings = [c['score_comparison']['score_competitiveness'] for c in competitive_analysis 
+                           if c.get('score_comparison')]
+                           
+            # Count ratings
+            price_counts = {}
+            for rating in price_ratings:
+                price_counts[rating] = price_counts.get(rating, 0) + 1
+                
+            score_counts = {}
+            for rating in score_ratings:
+                score_counts[rating] = score_counts.get(rating, 0) + 1
+                
+            # Determine predominant ratings
+            price_competitiveness = max(price_counts.items(), key=lambda x: x[1])[0] if price_counts else None
+            score_competitiveness = max(score_counts.items(), key=lambda x: x[1])[0] if score_counts else None
+            
+            overall_assessment = {
+                'price_competitiveness': price_competitiveness,
+                'score_competitiveness': score_competitiveness,
+                'overall_rating': self._get_overall_competitiveness(price_competitiveness, score_competitiveness)
+            }
+        else:
+            overall_assessment = None
+            
+        return {
+            'analysis_performed': True,
+            'competitive_analysis': competitive_analysis,
+            'tenders_analyzed': len(competitive_analysis),
+            'overall_assessment': overall_assessment
+        }
+    
+    def _get_overall_competitiveness(self, price_rating, score_rating):
+        """Determine overall competitiveness from price and score ratings"""
+        if not price_rating or not score_rating:
+            return price_rating or score_rating or "Insufficient data"
+            
+        # Rating scores (higher is better)
+        price_scores = {
+            'Very competitive': 4,
+            'Competitive': 3,
+            'Less competitive': 2,
+            'Not competitive': 1
+        }
+        
+        score_scores = {
+            'Excellent': 4,
+            'Good': 3,
+            'Below average': 2,
+            'Poor': 1
+        }
+        
+        # Calculate average rating (weight price and score equally)
+        price_score = price_scores.get(price_rating, 2)
+        quality_score = score_scores.get(score_rating, 2)
+        
+        avg_score = (price_score + quality_score) / 2
+        
+        # Map to overall rating
+        if avg_score >= 3.5:
+            return "Highly competitive"
+        elif avg_score >= 2.5:
+            return "Competitive"
+        elif avg_score >= 1.5:
+            return "Moderately competitive"
+        else:
+            return "Not competitive"
+    
+    def _analyze_vendor_compliance(self, vendor, offers):
+        """Analyze vendor compliance with tender requirements"""
+        if not offers.exists():
+            return {
+                "analysis_performed": False,
+                "reason": "No offers available for analysis"
+            }
+            
+        # Count offers with complete documentation
+        offers_with_documents = 0
+        total_required_docs = 0
+        total_submitted_docs = 0
+        
+        for offer in offers:
+            # Count required documents for this tender
+            tender_requirements = offer.tender.requirements.filter(is_mandatory=True).count()
+            total_required_docs += tender_requirements
+            
+            # Count submitted documents for this offer
+            submitted_documents = offer.documents.count()
+            total_submitted_docs += submitted_documents
+            
+            # Check if all required documents are submitted
+            if tender_requirements > 0 and submitted_documents >= tender_requirements:
+                offers_with_documents += 1
+                
+        # Calculate compliance rates
+        submission_compliance_rate = (offers_with_documents / offers.count() * 100) if offers.count() > 0 else 0
+        document_compliance_rate = (total_submitted_docs / total_required_docs * 100) if total_required_docs > 0 else 100
+        
+        # Get compliance issues
+        compliance_issues = []
+        for offer in offers:
+            # Find missing documents
+            if offer.status not in ['submitted', 'evaluated', 'awarded']:
+                continue
+                
+            required_docs = offer.tender.requirements.filter(is_mandatory=True)
+            missing_docs = []
+            
+            for req in required_docs:
+                if not offer.documents.filter(document_type=req.document_type).exists():
+                    missing_docs.append(req.document_type)
+                    
+            if missing_docs:
+                compliance_issues.append({
+                    'tender_reference': offer.tender.reference_number,
+                    'offer_id': offer.id,
+                    'missing_documents': missing_docs,
+                    'offer_status': offer.status
+                })
+                
+        # Determine compliance rating
+        if document_compliance_rate >= 95:
+            compliance_rating = "Excellent"
+        elif document_compliance_rate >= 85:
+            compliance_rating = "Good"
+        elif document_compliance_rate >= 70:
+            compliance_rating = "Average"
+        else:
+            compliance_rating = "Poor"
+            
+        return {
+            'analysis_performed': True,
+            'offers_analyzed': offers.count(),
+            'offers_with_complete_documents': offers_with_documents,
+            'submission_compliance_rate': submission_compliance_rate,
+            'total_required_docs': total_required_docs,
+            'total_submitted_docs': total_submitted_docs,
+            'document_compliance_rate': document_compliance_rate,
+            'compliance_rating': compliance_rating,
+            'compliance_issues': compliance_issues
+        }
+    
+    def _identify_vendor_strengths_weaknesses(self, vendor, offers):
+        """Identify vendor strengths and weaknesses based on evaluation data"""
+        if not offers.exists():
+            return {
+                "analysis_performed": False,
+                "reason": "No offers available for analysis"
+            }
+            
+        # Get all evaluations for this vendor's offers
+        evaluations = Evaluation.objects.filter(offer__vendor=vendor)
+        
+        if not evaluations.exists():
+            return {
+                "analysis_performed": False,
+                "reason": "No evaluation data available"
+            }
+            
+        # Group evaluations by criteria category
+        category_scores = {}
+        for evaluation in evaluations:
+            category = evaluation.criteria.category
+            
+            if category not in category_scores:
+                category_scores[category] = {
+                    'scores': [],
+                    'criteria_scores': {}
+                }
+                
+            # Add normalized score (as percentage of max score)
+            normalized_score = (float(evaluation.score) / float(evaluation.criteria.max_score)) * 100
+            category_scores[category]['scores'].append(normalized_score)
+            
+            # Track scores by criteria
+            criteria_name = evaluation.criteria.name
+            if criteria_name not in category_scores[category]['criteria_scores']:
+                category_scores[category]['criteria_scores'][criteria_name] = []
+                
+            category_scores[category]['criteria_scores'][criteria_name].append(normalized_score)
+        
+        # Calculate average scores by category
+        category_averages = {}
+        for category, data in category_scores.items():
+            category_averages[category] = sum(data['scores']) / len(data['scores'])
+            
+        # Calculate average scores by criteria
+        criteria_averages = {}
+        for category, data in category_scores.items():
+            for criteria_name, scores in data['criteria_scores'].items():
+                criteria_averages[criteria_name] = sum(scores) / len(scores)
+                
+        # Identify strengths (top 3 criteria)
+        strengths = []
+        for criteria_name, avg_score in sorted(criteria_averages.items(), key=lambda x: x[1], reverse=True)[:3]:
+            strengths.append({
+                'criteria': criteria_name,
+                'avg_score': avg_score,
+                'rating': 'Excellent' if avg_score >= 90 else
+                         'Good' if avg_score >= 80 else
+                         'Satisfactory'
+            })
+            
+        # Identify weaknesses (bottom 3 criteria)
+        weaknesses = []
+        for criteria_name, avg_score in sorted(criteria_averages.items(), key=lambda x: x[1])[:3]:
+            weaknesses.append({
+                'criteria': criteria_name,
+                'avg_score': avg_score,
+                'rating': 'Poor' if avg_score < 60 else
+                         'Needs improvement' if avg_score < 70 else
+                         'Average'
+            })
+            
+        # Identify key performance categories
+        performance_categories = []
+        for category, avg_score in sorted(category_averages.items(), key=lambda x: x[1], reverse=True):
+            performance_categories.append({
+                'category': category,
+                'avg_score': avg_score,
+                'rating': 'Excellent' if avg_score >= 90 else
+                         'Good' if avg_score >= 80 else
+                         'Satisfactory' if avg_score >= 70 else
+                         'Needs improvement' if avg_score >= 60 else
+                         'Poor'
+            })
+            
+        return {
+            'analysis_performed': True,
+            'strengths': strengths,
+            'weaknesses': weaknesses,
+            'performance_by_category': performance_categories
+        }
+    
+    def _generate_vendor_recommendations(self, vendor, offers):
+        """Generate recommendations for vendor improvement"""
+        recommendations = []
+        
+        # Check offer success rate
+        total_submitted = offers.filter(status__in=['submitted', 'evaluated', 'awarded', 'rejected']).count()
+        awarded = offers.filter(status='awarded').count()
+        
+        if total_submitted > 0:
+            success_rate = (awarded / total_submitted) * 100
+            
+            if success_rate < 20 and total_submitted >= 5:
+                recommendations.append({
+                    'type': 'improvement',
+                    'issue': 'Low success rate',
+                    'description': f'Success rate of {success_rate:.1f}% is below average.',
+                    'suggested_action': 'Review past unsuccessful offers to identify common weaknesses.'
+                })
+                
+        # Check technical scores
+        avg_technical = offers.filter(technical_score__isnull=False).aggregate(
+            avg=Avg('technical_score')
+        )['avg']
+        
+        if avg_technical and avg_technical < 70:
+            recommendations.append({
+                'type': 'improvement',
+                'issue': 'Low technical scores',
+                'description': f'Average technical score of {avg_technical:.1f} is below the competitive threshold.',
+                'suggested_action': 'Focus on improving technical aspects of offers, particularly in documentation quality and compliance with specifications.'
+            })
+            
+        # Check pricing competitiveness
+        # Compare prices with other vendors
+        price_issues = 0
+        for offer in offers:
+            if offer.price is None:
+                continue
+                
+            other_offers = Offer.objects.filter(
+                tender=offer.tender, 
+                price__isnull=False
+            ).exclude(vendor=vendor)
+            
+            if not other_offers.exists():
+                continue
+                
+            other_prices = [float(o.price) for o in other_offers]
+            avg_price = sum(other_prices) / len(other_prices)
+            
+            if float(offer.price) > avg_price * 1.2:  # 20% above average
+                price_issues += 1
+                
+        if price_issues > 0 and price_issues >= total_submitted * 0.3:  # If at least 30% of offers have price issues
+            recommendations.append({
+                'type': 'improvement',
+                'issue': 'Pricing not competitive',
+                'description': f'In {price_issues} offers, pricing was significantly above market average.',
+                'suggested_action': 'Review pricing strategy to be more competitive while maintaining quality.'
+            })
+            
+        # Check document compliance
+        compliance_issues = 0
+        for offer in offers:
+            required_docs = offer.tender.requirements.filter(is_mandatory=True).count()
+            submitted_docs = offer.documents.count()
+            
+            if required_docs > 0 and submitted_docs < required_docs:
+                compliance_issues += 1
+                
+        if compliance_issues > 0:
+            recommendations.append({
+                'type': 'improvement',
+                'issue': 'Documentation compliance',
+                'description': f'{compliance_issues} offers had incomplete documentation.',
+                'suggested_action': 'Ensure all required documents are included with each offer submission.'
+            })
+            
+        # Check for consistency
+        if total_submitted >= 3:
+            # Check consistency in technical scores
+            technical_scores = [float(o.technical_score) for o in offers if o.technical_score is not None]
+            
+            if technical_scores:
+                avg_score = sum(technical_scores) / len(technical_scores)
+                score_variance = sum((s - avg_score) ** 2 for s in technical_scores) / len(technical_scores)
+                
+                if score_variance > 100:  # Arbitrary threshold
+                    recommendations.append({
+                        'type': 'improvement',
+                        'issue': 'Inconsistent performance',
+                        'description': 'Technical scores vary significantly between offers.',
+                        'suggested_action': 'Standardize internal processes to ensure consistent quality across all submissions.'
+                    })
+                    
+        # General recommendation if few others
+        if len(recommendations) < 2:
+            recommendations.append({
+                'type': 'general',
+                'issue': 'Continuous improvement',
+                'description': 'Even with good performance, there is always room for improvement.',
+                'suggested_action': 'Monitor market trends and continuously update capabilities to maintain competitive advantage.'
+            })
+            
+        return recommendations
+    
+    def _detect_evaluator_bias(self, evaluations):
+        """Detect potential evaluator bias in tender evaluations"""
+        if not evaluations.exists():
+            return []
+            
+        # Group evaluations by evaluator
+        evaluator_scores = {}
+        for evaluation in evaluations:
+            evaluator_id = evaluation.evaluator.id
+            
+            if evaluator_id not in evaluator_scores:
+                evaluator_scores[evaluator_id] = {
+                    'evaluator_id': evaluator_id,
+                    'evaluator_name': evaluation.evaluator.username,
+                    'scores': [],
+                    'normalized_scores': []
+                }
+                
+            # Add raw and normalized scores
+            score = float(evaluation.score)
+            max_score = float(evaluation.criteria.max_score)
+            normalized_score = (score / max_score) * 100 if max_score > 0 else 0
+            
+            evaluator_scores[evaluator_id]['scores'].append(score)
+            evaluator_scores[evaluator_id]['normalized_scores'].append(normalized_score)
+            
+        # Calculate average normalized score for each evaluator
+        evaluator_data = []
+        for evaluator_id, data in evaluator_scores.items():
+            avg_score = sum(data['scores']) / len(data['scores']) if data['scores'] else 0
+            avg_normalized = sum(data['normalized_scores']) / len(data['normalized_scores']) if data['normalized_scores'] else 0
+            
+            evaluator_data.append({
+                'evaluator_id': evaluator_id,
+                'evaluator_name': data['evaluator_name'],
+                'avg_score': avg_score,
+                'avg_normalized_score': avg_normalized,
+                'evaluation_count': len(data['scores'])
+            })
+            
+        # Calculate grand average
+        all_normalized_scores = [score for data in evaluator_scores.values() for score in data['normalized_scores']]
+        grand_avg = sum(all_normalized_scores) / len(all_normalized_scores) if all_normalized_scores else 0
+        
+        # Identify outlier evaluators (significant deviation from grand average)
+        biased_evaluators = []
+        for evaluator in evaluator_data:
+            deviation = evaluator['avg_normalized_score'] - grand_avg
+            
+            if abs(deviation) > 15 and evaluator['evaluation_count'] >= 3:  # Significant deviation with enough samples
+                biased_evaluators.append({
+                    'evaluator_id': evaluator['evaluator_id'],
+                    'evaluator_name': evaluator['evaluator_name'],
+                    'bias_type': 'lenient' if deviation > 0 else 'strict',
+                    'avg_normalized_score': evaluator['avg_normalized_score'],
+                    'grand_average': grand_avg,
+                    'deviation': deviation,
+                    'evaluation_count': evaluator['evaluation_count']
+                })
+                
+        return sorted(biased_evaluators, key=lambda x: abs(x['deviation']), reverse=True)

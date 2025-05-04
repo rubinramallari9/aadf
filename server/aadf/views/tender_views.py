@@ -5,12 +5,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Q, Count, Sum, Avg
+from django.http import FileResponse
 
 import logging
 import uuid
 
 from ..models import (
-    User, Tender, TenderRequirement, Offer, EvaluationCriteria, Report
+    User, Tender, TenderRequirement, Offer, EvaluationCriteria, Report, AuditLog
 )
 from ..serializers import (
     TenderSerializer, TenderDetailSerializer, TenderRequirementSerializer, 
@@ -21,6 +22,7 @@ from ..utils import (
     generate_reference_number, create_notification, generate_tender_report, 
     export_tender_data
 )
+from ..ai_analysis import AIAnalyzer  # Import the AI analyzer module
 
 logger = logging.getLogger('aadf')
 
@@ -307,3 +309,68 @@ class TenderViewSet(viewsets.ModelViewSet):
             serializer.save(tender=tender)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffOrAdmin])
+    def analyze_tender(self, request, pk=None):
+        """Perform comprehensive AI analysis of a tender"""
+        tender = self.get_object()
+        
+        # Initialize AI analyzer
+        ai_analyzer = AIAnalyzer()
+        
+        # Analyze tender
+        analysis_result = ai_analyzer.analyze_tender(tender.id)
+        
+        if analysis_result.get('status') == 'error':
+            return Response(
+                {'error': analysis_result.get('message', 'Analysis failed')},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+        # Log the AI usage
+        AuditLog.objects.create(
+            user=request.user,
+            action='analyze_tender',
+            entity_type='tender',
+            entity_id=tender.id,
+            details={
+                'tender_reference': tender.reference_number,
+                'analysis_timestamp': analysis_result.get('analysis_timestamp')
+            },
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+        
+        return Response(analysis_result)
+        
+    @action(detail=True, methods=['post'], permission_classes=[IsStaffOrAdmin])
+    def generate_analytics_report(self, request, pk=None):
+        """Generate an enhanced analytics report using AI"""
+        tender = self.get_object()
+        report_type = request.data.get('report_type', 'comprehensive')
+        
+        # Initialize AI analyzer
+        ai_analyzer = AIAnalyzer()
+        
+        # Generate report
+        report_result = ai_analyzer.generate_analytics_report(tender.id, report_type)
+        
+        if report_result.get('status') == 'error':
+            return Response(
+                {'error': report_result.get('message', 'Report generation failed')},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+        # Log the AI usage
+        AuditLog.objects.create(
+            user=request.user,
+            action='generate_ai_analytics_report',
+            entity_type='tender',
+            entity_id=tender.id,
+            details={
+                'tender_reference': tender.reference_number,
+                'report_type': report_type
+            },
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+        
+        return Response(report_result)
