@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import { VendorProvider } from './contexts/VendorContext'; // Import VendorProvider
+import { VendorProvider } from './contexts/VendorContext';
 
 // Import pages
 import Home from './pages/Home';
@@ -29,8 +29,16 @@ import UserDetail from './pages/users/UserDetail';
 import UserCreate from './pages/users/UserCreate';
 import UserEdit from './pages/users/UserEdit';
 import NotificationList from './pages/notifications/NotificationList';
+import Reports from './pages/Reports';
+
+// Import Evaluation pages
 import EvaluationList from './pages/evaluations/EvaluationList';
 import EvaluationDetail from './pages/evaluations/EvaluationDetail';
+import EvaluatorPerformance from './pages/evaluations/EvaluatorPerformance';
+import EvaluatorDashboard from './pages/evaluations/EvaluatorDashboard';
+import EvaluationSummary from './pages/evaluations/EvaluationSummary';
+import OfferEvaluation from './pages/evaluations/OfferEvaluation';
+
 import RequireAuth from './pages/auth/RequireAuth';
 import NotFound from './pages/NotFound';
 
@@ -38,7 +46,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <VendorProvider> {/* Wrap with VendorProvider */}
+        <VendorProvider>
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Home />} />
@@ -104,6 +112,11 @@ function App() {
                 <OfferEdit />
               </RequireAuth>
             } />
+            <Route path="/offers/:offerId/evaluate" element={
+              <RequireAuth allowedRoles={['evaluator', 'admin', 'staff']}>
+                <OfferEvaluation />
+              </RequireAuth>
+            } />
             
             {/* Vendor routes */}
             <Route path="/vendors" element={
@@ -165,6 +178,28 @@ function App() {
             <Route path="/evaluations/:id" element={
               <RequireAuth allowedRoles={['evaluator', 'admin', 'staff']}>
                 <EvaluationDetail />
+              </RequireAuth>
+            } />
+            <Route path="/evaluations/summary/:tenderId" element={
+              <RequireAuth allowedRoles={['admin', 'staff']}>
+                <EvaluationSummary />
+              </RequireAuth>
+            } />
+            <Route path="/evaluations/performance" element={
+              <RequireAuth allowedRoles={['admin', 'staff', 'evaluator']}>
+                <EvaluatorPerformance />
+              </RequireAuth>
+            } />
+            <Route path="/evaluations/dashboard" element={
+              <RequireAuth allowedRoles={['evaluator']}>
+                <EvaluatorDashboard />
+              </RequireAuth>
+            } />
+            
+            {/* Reports */}
+            <Route path="/reports" element={
+              <RequireAuth allowedRoles={['admin', 'staff']}>
+                <Reports />
               </RequireAuth>
             } />
             
