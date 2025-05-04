@@ -1,4 +1,4 @@
-// client/src/components/auth/RequireAuth.tsx
+// src/components/auth/RequireAuth.tsx
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';

@@ -1,9 +1,9 @@
 // Fixed Notifications.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Layout from '../components/layout/Layout';
-import { useAuth } from '../contexts/AuthContext';
-import { notificationApi } from '../api/api';
+import Layout from '../../components/layout/Layout';
+import { useAuth } from '../../contexts/AuthContext';
+import { notificationApi } from '../../api/api';
 
 interface Notification {
   id: number;

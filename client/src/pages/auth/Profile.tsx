@@ -41,7 +41,7 @@ const Profile: React.FC = () => {
       // you might need to query a specific endpoint to get the user's company
       const vendors = await vendorApi.getAll();
       const userCompany = Array.isArray(vendors) 
-        ? vendors.find(vendor => vendor.users?.some(u => u.id === user?.id))
+        ? vendors.find(vendor => vendor.users?.some((u: { id: number | undefined; }) => u.id === user?.id))
         : null;
       
       if (userCompany) {

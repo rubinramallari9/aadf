@@ -31,7 +31,7 @@ import UserEdit from './pages/users/UserEdit';
 import NotificationList from './pages/notifications/NotificationList';
 import EvaluationList from './pages/evaluations/EvaluationList';
 import EvaluationDetail from './pages/evaluations/EvaluationDetail';
-import RequireAuth from './components/auth/RequireAuth';
+import RequireAuth from './pages/auth/RequireAuth';
 import NotFound from './pages/NotFound';
 
 function App() {

@@ -64,7 +64,7 @@ const UserDetail: React.FC = () => {
           
           // Find the company associated with this user
           const userVendorCompany = Array.isArray(vendors) 
-            ? vendors.find(company => company.users?.some(u => u.id === userData.id))
+            ? vendors.find(company => company.users?.some((u: { id: any; }) => u.id === userData.id))
             : null;
           
           if (userVendorCompany) {
