@@ -6,6 +6,7 @@ from .offer_views import OfferViewSet
 from .document_views import (
     TenderDocumentViewSet, OfferDocumentViewSet, DocumentDownloadView
 )
+from .document_download_views import SecureDownloadLinkView
 from .evaluation_views import EvaluationViewSet, EvaluationCriteriaViewSet
 from .vendor_views import VendorCompanyViewSet
 from .approval_views import ApprovalViewSet

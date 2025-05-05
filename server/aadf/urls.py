@@ -12,7 +12,7 @@ from .views import (
     ApprovalViewSet, ReportViewSet, NotificationViewSet, AuditLogViewSet,
     
     # Document handling
-    DocumentDownloadView,
+    DocumentDownloadView, SecureDownloadLinkView,
     
     # Dashboard and management views
     DashboardView, TenderSearchView, UserManagementView
@@ -45,8 +45,17 @@ urlpatterns = [
     path('auth/profile/', UserProfileView.as_view(), name='user-profile'),
     path('auth/admin-create-user/', AdminCreateUserView.as_view(), name='admin-create-user'),
     
+    # Secure download link endpoints
+    path('api/tender-documents/<int:document_id>/secure-download-link/', 
+         SecureDownloadLinkView.as_view(), {'document_type': 'tender'}, name='tender-secure-download-link'),
+    path('api/offer-documents/<int:document_id>/secure-download-link/', 
+         SecureDownloadLinkView.as_view(), {'document_type': 'offer'}, name='offer-secure-download-link'),
+    path('api/reports/<int:document_id>/secure-download-link/', 
+         SecureDownloadLinkView.as_view(), {'document_type': 'report'}, name='report-secure-download-link'),
+    
     # File Download Endpoint
-    path('download/<str:document_type>/<int:document_id>/', DocumentDownloadView.as_view(), name='document-download'),
+    path('api/download/<str:document_type>/<int:document_id>/', 
+         DocumentDownloadView.as_view(), name='document-download'),
     
     # Custom endpoints
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
@@ -56,7 +65,7 @@ urlpatterns = [
     path('users/', UserManagementView.as_view(), name='user-list'),
     path('users/<int:user_id>/', UserManagementView.as_view(), name='user-detail'),
     path('users/<int:user_id>/reset-password/', UserManagementView.as_view(), name='user-reset-password'),
-    path('reports/<int:pk>/secure-download-link/', ReportViewSet.as_view({'get': 'secure_download_link'}), name='report-secure-download-link'),
+    
     # AI-enhanced endpoints
     path('ai/analyze-tender/<int:tender_id>/', TenderViewSet.as_view({'get': 'analyze_tender'}), name='ai-analyze-tender'),
     path('ai/analyze-offer/<int:offer_id>/', OfferViewSet.as_view({'get': 'analyze_offer'}), name='ai-analyze-offer'),

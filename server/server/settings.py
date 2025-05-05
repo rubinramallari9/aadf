@@ -177,6 +177,31 @@ CORS_ALLOWED_ORIGINS = [
 # Allow credentials in CORS requests
 CORS_ALLOW_CREDENTIALS = True
 
+# Secure document download settings
+SECURE_DOCUMENT_DOWNLOAD = {
+    'DEFAULT_EXPIRY_MINUTES': 60,  # Default expiration time for download links
+    'ALLOWED_DOCUMENT_TYPES': ['tender', 'offer', 'report'],
+    'MAX_DOWNLOADS_PER_LINK': 3,  # Optional: limit number of downloads per link
+}
+
+# Additional MIME types for document downloads
+DOCUMENT_MIME_TYPES = {
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.ppt': 'application/vnd.ms-powerpoint',
+    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    '.csv': 'text/csv',
+    '.txt': 'text/plain',
+    '.json': 'application/json',
+    '.zip': 'application/zip',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif'
+}
 # Email settings for notification
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Use console for development
 EMAIL_HOST = 'smtp.gmail.com'

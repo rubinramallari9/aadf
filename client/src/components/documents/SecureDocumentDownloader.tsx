@@ -46,8 +46,7 @@ const SecureDocumentDownloader: React.FC<SecureDocumentDownloaderProps> = ({
     
     try {
       // First, get a secure download URL
-      // Make sure we're using the correct endpoint paths from API_ENDPOINTS
-      const apiUrl = `/api/${documentType}s/${documentId}/secure-download-link/`;
+      const apiUrl = `/api/${documentType}-documents/${documentId}/secure-download-link/`;
       
       const secureUrlResponse = await fetch(apiUrl, {
         method: 'GET',
@@ -69,7 +68,7 @@ const SecureDocumentDownloader: React.FC<SecureDocumentDownloaderProps> = ({
         throw new Error(`Failed to get secure download link: ${secureUrlResponse.status}`);
       }
       
-      // Now we can safely parse the JSON
+      // Parse the JSON
       const secureUrlData = await secureUrlResponse.json();
       const downloadUrl = secureUrlData.download_url;
       
