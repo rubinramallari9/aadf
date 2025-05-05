@@ -1,6 +1,4 @@
-// client/src/components/documents/SecureDocumentDownloader.tsx
 import React, { useState } from 'react';
-import { documentApi } from '../../api/DocumentApi';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SecureDocumentDownloaderProps {
@@ -47,8 +45,9 @@ const SecureDocumentDownloader: React.FC<SecureDocumentDownloaderProps> = ({
     setError(null);
     
     try {
-      // Get a secure download URL first
-      const secureUrlResponse = await fetch(`/api/${documentType}s/${documentId}/secure-download-link/`, {
+      // First, get a secure download URL
+      const secureUrlEndpoint = `/api/${documentType}s/${documentId}/secure-download-link/`;
+      const secureUrlResponse = await fetch(secureUrlEndpoint, {
         method: 'GET',
         headers: {
           'Authorization': `Token ${token}`,
@@ -63,32 +62,17 @@ const SecureDocumentDownloader: React.FC<SecureDocumentDownloaderProps> = ({
       const secureUrlData = await secureUrlResponse.json();
       const downloadUrl = secureUrlData.download_url;
       
-      // Perform the actual download using the Fetch API
-      const response = await fetch(downloadUrl, {
-        method: 'GET',
-        // No need to include Authorization headers, the URL contains the token
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`);
-      }
-      
-      // Convert response to blob
-      const blob = await response.blob();
-      
-      // Create a URL for the blob
-      const url = window.URL.createObjectURL(blob);
-      
-      // Create a link element to trigger the download
+      // Create an anchor element to handle the download
       const a = document.createElement('a');
-      a.href = url;
-      a.download = secureUrlData.report_filename || `document-${documentId}`;
+      a.href = downloadUrl;
+      a.download = secureUrlData.filename || `document-${documentId}`;
       document.body.appendChild(a);
       a.click();
       
       // Clean up
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      setTimeout(() => {
+        document.body.removeChild(a);
+      }, 100);
       
       if (onSuccess) onSuccess();
     } catch (err: any) {

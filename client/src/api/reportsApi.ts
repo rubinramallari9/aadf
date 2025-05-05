@@ -216,12 +216,12 @@ export const reportsApi = {
     }
   },
   
-  // Use secure download link method for downloading reports
+  // Use secure download method for downloading reports
   downloadReport: async (id: number) => {
     try {
       console.log("downloadReport called with ID:", id);
       
-      // Use the secure download link functionality
+      // Use the secure download method
       return await documentApi.downloadWithSecureLink('report', id);
     } catch (err) {
       console.error("Error in downloadReport:", err);
@@ -285,174 +285,6 @@ export const reportsApi = {
           description: 'Summary of all evaluations for a tender'
         }
       ];
-    }
-  },
-  
-  // Generate a comparative report
-  generateComparativeReport: async (data: any) => {
-    try {
-      console.log("generateComparativeReport called with data:", data);
-      console.log("API endpoint:", API_ENDPOINTS.REPORTS.GENERATE_COMPARATIVE);
-      
-      const response = await fetch(API_ENDPOINTS.REPORTS.GENERATE_COMPARATIVE, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      
-      console.log("Generate comparative report response status:", response.status);
-      
-      // Check if we got HTML instead of JSON (auth issue)
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response. Your session may have expired.');
-      }
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
-        
-        let errorMessage = 'Failed to generate comparative report';
-        
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-            console.error("API error response:", errorData);
-          } else {
-            // Try to get text error
-            const errorText = await response.text();
-            console.error("API error text response:", errorText);
-            if (errorText && errorText.length < 500) {
-              errorMessage = `${errorMessage}: ${errorText}`;
-            }
-          }
-        } catch (parseError) {
-          console.error("Error parsing error response:", parseError);
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      const result = await response.json();
-      console.log("Comparative report generation result:", result);
-      return result;
-    } catch (err) {
-      console.error("Error in generateComparativeReport:", err);
-      throw err;
-    }
-  },
-  
-  // Generate a vendor report
-  generateVendorReport: async (data: any) => {
-    try {
-      console.log("generateVendorReport called with data:", data);
-      console.log("API endpoint:", API_ENDPOINTS.REPORTS.GENERATE_VENDOR);
-      
-      const response = await fetch(API_ENDPOINTS.REPORTS.GENERATE_VENDOR, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      
-      console.log("Generate vendor report response status:", response.status);
-      
-      // Check if we got HTML instead of JSON (auth issue)
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response. Your session may have expired.');
-      }
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
-        
-        let errorMessage = 'Failed to generate vendor report';
-        
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-            console.error("API error response:", errorData);
-          } else {
-            // Try to get text error
-            const errorText = await response.text();
-            console.error("API error text response:", errorText);
-            if (errorText && errorText.length < 500) {
-              errorMessage = `${errorMessage}: ${errorText}`;
-            }
-          }
-        } catch (parseError) {
-          console.error("Error parsing error response:", parseError);
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      const result = await response.json();
-      console.log("Vendor report generation result:", result);
-      return result;
-    } catch (err) {
-      console.error("Error in generateVendorReport:", err);
-      throw err;
-    }
-  },
-  
-  // Generate a document archive
-  generateArchive: async (data: any) => {
-    try {
-      console.log("generateArchive called with data:", data);
-      console.log("API endpoint:", API_ENDPOINTS.REPORTS.GENERATE_ARCHIVE);
-      
-      const response = await fetch(API_ENDPOINTS.REPORTS.GENERATE_ARCHIVE, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      
-      console.log("Generate archive response status:", response.status);
-      
-      // Check if we got HTML instead of JSON (auth issue)
-      if (await isHtmlResponse(response)) {
-        throw new Error('Received HTML response. Your session may have expired.');
-      }
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
-        
-        let errorMessage = 'Failed to generate archive';
-        
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-            console.error("API error response:", errorData);
-          } else {
-            // Try to get text error
-            const errorText = await response.text();
-            console.error("API error text response:", errorText);
-            if (errorText && errorText.length < 500) {
-              errorMessage = `${errorMessage}: ${errorText}`;
-            }
-          }
-        } catch (parseError) {
-          console.error("Error parsing error response:", parseError);
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      const result = await response.json();
-      console.log("Archive generation result:", result);
-      return result;
-    } catch (err) {
-      console.error("Error in generateArchive:", err);
-      throw err;
     }
   }
 };

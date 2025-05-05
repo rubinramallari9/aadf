@@ -159,61 +159,72 @@ export const documentApi = {
     }
   },
   
-  // Secure download method using programmatic fetch with auth headers
-  downloadWithSecureLink: async (documentType: 'report' | 'tender' | 'offer', documentId: number): Promise<boolean> => {
+  // Secure download methods
+  getSecureDownloadLink: async (documentType: string, documentId: number): Promise<{ download_url: string, filename: string }> => {
     try {
-      console.log(`Starting secure download for ${documentType} ${documentId}`);
+      // Determine the correct endpoint based on document type
+      let endpoint = '';
+      switch(documentType) {
+        case 'report':
+          endpoint = `${API_ENDPOINTS.REPORTS}/${documentId}/secure-download-link/`;
+          break;
+        case 'tender':
+          endpoint = `${API_ENDPOINTS.TENDER_DOCUMENTS}/${documentId}/secure-download-link/`;
+          break;
+        case 'offer':
+          endpoint = `${API_ENDPOINTS.OFFER_DOCUMENTS}/${documentId}/secure-download-link/`;
+          break;
+        default:
+          throw new Error(`Unsupported document type: ${documentType}`);
+      }
       
-      // First, get the secure download URL
-      const secureUrlEndpoint = `${API_ENDPOINTS[`${documentType.toUpperCase()}S`].BASE}/${documentId}/secure-download-link/`;
-      console.log("Requesting secure URL from:", secureUrlEndpoint);
-      
-      const secureUrlResponse = await fetch(secureUrlEndpoint, {
+      // Make the request to get the secure download link
+      const response = await fetch(endpoint, {
         method: 'GET',
         headers: getAuthHeaders()
       });
       
       // Check if the response is HTML (possible auth issue)
-      if (await isHtmlResponse(secureUrlResponse)) {
+      if (await isHtmlResponse(response)) {
         throw new Error('Received HTML response. Your session may have expired.');
       }
       
-      if (!secureUrlResponse.ok) {
-        throw new Error(`Failed to get secure download link: ${secureUrlResponse.status}`);
-      }
-      
-      const secureUrlData = await secureUrlResponse.json();
-      const downloadUrl = secureUrlData.download_url;
-      console.log("Received secure download URL:", downloadUrl);
-      
-      // Use the secure URL to download the file
-      const response = await fetch(downloadUrl, {
-        method: 'GET',
-        // Note: No auth headers required here as the URL is already authenticated
-      });
-      
       if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`);
+        throw new Error(`Failed to get secure download link: ${response.status}`);
       }
       
-      // Convert response to blob
-      const blob = await response.blob();
+      // Parse the response to get the download URL
+      const data = await response.json();
+      return {
+        download_url: data.download_url,
+        filename: data.report_filename || data.filename || `${documentType}-${documentId}`
+      };
+    } catch (error) {
+      console.error(`Error getting secure download link for ${documentType} ${documentId}:`, error);
+      throw error;
+    }
+  },
+  
+  // Download document using secure link
+  downloadWithSecureLink: async (documentType: 'report' | 'tender' | 'offer', documentId: number): Promise<boolean> => {
+    try {
+      console.log(`Starting secure download for ${documentType} ${documentId}`);
       
-      // Create a URL for the blob
-      const url = window.URL.createObjectURL(blob);
+      // Get the secure download URL
+      const { download_url, filename } = await documentApi.getSecureDownloadLink(documentType, documentId);
+      console.log("Received secure download URL:", download_url);
       
-      // Create a link element to trigger the download
+      // Create an anchor element to trigger the download
       const a = document.createElement('a');
-      a.href = url;
-      a.download = secureUrlData.filename || `${documentType}-${documentId}`;
+      a.href = download_url;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       
       // Clean up
       setTimeout(() => {
-        window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-      }, 0);
+      }, 100);
       
       return true;
     } catch (error) {
