@@ -8,10 +8,9 @@ from .document_views import (
 )
 from .document_download_views import SecureDownloadLinkView
 from .evaluation_views import EvaluationViewSet, EvaluationCriteriaViewSet
-from .vendor_views import VendorCompanyViewSet
+from .vendor_views import VendorCompanyViewSet, VendorUserViewSet
 from .approval_views import ApprovalViewSet
 from .report_views import ReportViewSet
 from .notification_views import NotificationViewSet
 from .audit_views import AuditLogViewSet
 from .dashboard_views import DashboardView, TenderSearchView, UserManagementView
-from .vendor_views import VendorCompanyViewSet, VendorUserViewSet

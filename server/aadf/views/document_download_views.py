@@ -16,7 +16,7 @@ import logging
 from ..models import (
     TenderDocument, OfferDocument, Report, AuditLog
 )
-from ..utils.secure_download_utils import generate_secure_document_link, verify_document_signature
+from ..utils import generate_secure_document_link, verify_document_signature
 
 logger = logging.getLogger('aadf')
 

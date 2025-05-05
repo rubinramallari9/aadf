@@ -61,7 +61,7 @@ def validate_file_size(file):
 
 def calculate_offer_score(offer):
     """Calculate total score for an offer based on evaluations"""
-    from .models import Evaluation, EvaluationCriteria
+    from ..models import Evaluation, EvaluationCriteria
     
     evaluations = Evaluation.objects.filter(offer=offer)
 
@@ -93,7 +93,7 @@ def calculate_offer_score(offer):
     # Calculate financial score
     # Financial score is calculated by comparing with other offers
     if offer.price and offer.price > 0:
-        from .models import Offer
+        from ..models import Offer
         lowest_price = Offer.objects.filter(
             tender=offer.tender,
             status='submitted',
@@ -129,7 +129,7 @@ def calculate_offer_score(offer):
 
 def create_notification(user, title, message, notification_type='info', related_entity=None):
     """Create a notification for a user"""
-    from .models import Notification
+    from ..models import Notification
     
     notification_data = {
         'user': user,
@@ -189,7 +189,7 @@ def send_notification_email(user, title, message):
 
 def check_tender_deadlines():
     """Check for tenders that have passed their deadline and close them"""
-    from .models import Tender
+    from ..models import Tender
     
     if not settings.PROCUREMENT_SETTINGS.get('AUTO_CLOSE_TENDERS', True):
         return
@@ -223,7 +223,7 @@ def notify_tender_closed(tender):
         )
 
     # Notify staff users
-    from .models import User
+    from ..models import User
     staff_users = User.objects.filter(role__in=['staff', 'admin'])
     for user in staff_users:
         if user != tender.created_by:  # Don't notify twice
@@ -376,7 +376,7 @@ def export_tender_data(tender):
 
 def clean_corrupted_evaluations():
     """Clean up any corrupted evaluation data"""
-    from .models import Evaluation
+    from ..models import Evaluation
     from django.db.models import F
     
     try:
@@ -403,7 +403,7 @@ def clean_corrupted_evaluations():
 
 def recalculate_all_offer_scores():
     """Recalculate scores for all submitted offers"""
-    from .models import Offer
+    from ..models import Offer
     
     try:
         offers = Offer.objects.filter(status__in=['submitted', 'evaluated', 'awarded'])
@@ -422,7 +422,7 @@ def recalculate_all_offer_scores():
 
 def generate_offer_audit_trail(offer):
     """Generate an audit trail for an offer"""
-    from .models import AuditLog
+    from ..models import AuditLog
     
     try:
         # Get all audit logs related to this offer
@@ -466,7 +466,7 @@ def generate_offer_audit_trail(offer):
 
 def get_vendor_statistics(vendor):
     """Get statistics for a vendor"""
-    from .models import Offer
+    from ..models import Offer
     
     try:
         offers = Offer.objects.filter(vendor=vendor)
@@ -493,7 +493,7 @@ def get_vendor_statistics(vendor):
 
 def get_dashboard_statistics():
     """Get statistics for the dashboard"""
-    from .models import Tender, Offer, User, VendorCompany
+    from ..models import Tender, Offer, User, VendorCompany
     
     try:
         stats = {
@@ -580,7 +580,7 @@ def verify_document_signature(document_type, document_id, expires, signature):
 
 def anonymize_personal_data(user_id, keep_username=True):
     """Anonymize personal data for a user (GDPR compliance)"""
-    from .models import User
+    from ..models import User
     
     try:
         user = User.objects.get(id=user_id)
@@ -611,7 +611,7 @@ def anonymize_personal_data(user_id, keep_username=True):
 
 def log_system_event(event_type, details=None):
     """Log a system event in the audit log"""
-    from .models import AuditLog, User
+    from ..models import AuditLog, User
     
     try:
         # Try to find a system user or admin

@@ -11,7 +11,7 @@ import logging
 
 from ..models import User, VendorCompany, AuditLog, Notification
 from ..serializers import UserSerializer, VendorCompanySerializer
-from ..utils import create_notification
+from aadf.utils import create_notification
 
 logger = logging.getLogger('aadf')
 
