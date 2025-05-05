@@ -233,6 +233,7 @@ export const reportsApi = {
   getReportTypes: async () => {
     try {
       console.log("getReportTypes called");
+      // Changed this endpoint to match the server's URL structure - using REPORT_TYPES property
       console.log("API endpoint:", API_ENDPOINTS.REPORTS.REPORT_TYPES);
       
       const response = await fetch(API_ENDPOINTS.REPORTS.REPORT_TYPES, {

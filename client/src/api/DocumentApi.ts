@@ -32,7 +32,7 @@ export const documentApi = {
   // Tender document methods
   getTenderDocuments: async (tenderId: number): Promise<any[]> => {
     try {
-      const response = await fetch(`${API_ENDPOINTS.TENDER_DOCUMENTS}?tender_id=${tenderId}`, {
+      const response = await fetch(`${API_ENDPOINTS.DOCUMENTS.TENDER.BY_TENDER(tenderId)}`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
@@ -58,7 +58,7 @@ export const documentApi = {
         formData.append('document_type', documentType);
       }
       
-      const response = await fetch(API_ENDPOINTS.TENDER_DOCUMENTS, {
+      const response = await fetch(API_ENDPOINTS.DOCUMENTS.TENDER.BASE, {
         method: 'POST',
         headers: {
           // Do not include Content-Type header when using FormData
@@ -80,7 +80,7 @@ export const documentApi = {
   
   deleteTenderDocument: async (documentId: number): Promise<void> => {
     try {
-      const response = await fetch(`${API_ENDPOINTS.TENDER_DOCUMENTS}/${documentId}/`, {
+      const response = await fetch(`${API_ENDPOINTS.DOCUMENTS.TENDER.DETAIL(documentId)}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -97,7 +97,7 @@ export const documentApi = {
   // Offer document methods
   getOfferDocuments: async (offerId: number): Promise<any[]> => {
     try {
-      const response = await fetch(`${API_ENDPOINTS.OFFER_DOCUMENTS}?offer_id=${offerId}`, {
+      const response = await fetch(`${API_ENDPOINTS.DOCUMENTS.OFFER.BY_OFFER(offerId)}`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
@@ -123,7 +123,7 @@ export const documentApi = {
         formData.append('document_type', documentType);
       }
       
-      const response = await fetch(API_ENDPOINTS.OFFER_DOCUMENTS, {
+      const response = await fetch(API_ENDPOINTS.DOCUMENTS.OFFER.BASE, {
         method: 'POST',
         headers: {
           // Do not include Content-Type header when using FormData
@@ -145,7 +145,7 @@ export const documentApi = {
   
   deleteOfferDocument: async (documentId: number): Promise<void> => {
     try {
-      const response = await fetch(`${API_ENDPOINTS.OFFER_DOCUMENTS}/${documentId}/`, {
+      const response = await fetch(`${API_ENDPOINTS.DOCUMENTS.OFFER.DETAIL(documentId)}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -166,13 +166,13 @@ export const documentApi = {
       let endpoint = '';
       switch(documentType) {
         case 'report':
-          endpoint = `${API_ENDPOINTS.REPORTS}/${documentId}/secure-download-link/`;
+          endpoint = `${API_ENDPOINTS.DOCUMENTS.SECURE_DOWNLOAD.REPORT(documentId)}`;
           break;
         case 'tender':
-          endpoint = `${API_ENDPOINTS.TENDER_DOCUMENTS}/${documentId}/secure-download-link/`;
+          endpoint = `${API_ENDPOINTS.DOCUMENTS.SECURE_DOWNLOAD.TENDER(documentId)}`;
           break;
         case 'offer':
-          endpoint = `${API_ENDPOINTS.OFFER_DOCUMENTS}/${documentId}/secure-download-link/`;
+          endpoint = `${API_ENDPOINTS.DOCUMENTS.SECURE_DOWNLOAD.OFFER(documentId)}`;
           break;
         default:
           throw new Error(`Unsupported document type: ${documentType}`);

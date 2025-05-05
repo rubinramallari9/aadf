@@ -46,8 +46,10 @@ const SecureDocumentDownloader: React.FC<SecureDocumentDownloaderProps> = ({
     
     try {
       // First, get a secure download URL
-      const secureUrlEndpoint = `/api/${documentType}s/${documentId}/secure-download-link/`;
-      const secureUrlResponse = await fetch(secureUrlEndpoint, {
+      // Make sure we're using the correct endpoint paths from API_ENDPOINTS
+      const apiUrl = `/api/${documentType}s/${documentId}/secure-download-link/`;
+      
+      const secureUrlResponse = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Token ${token}`,
@@ -55,12 +57,25 @@ const SecureDocumentDownloader: React.FC<SecureDocumentDownloaderProps> = ({
         }
       });
       
+      // Check for HTML response (auth error) before trying to parse JSON
+      const contentType = secureUrlResponse.headers.get('content-type');
+      const isHtml = contentType && contentType.includes('text/html');
+      
+      if (isHtml) {
+        throw new Error('Authentication error. Your session may have expired.');
+      }
+      
       if (!secureUrlResponse.ok) {
         throw new Error(`Failed to get secure download link: ${secureUrlResponse.status}`);
       }
       
+      // Now we can safely parse the JSON
       const secureUrlData = await secureUrlResponse.json();
       const downloadUrl = secureUrlData.download_url;
+      
+      if (!downloadUrl) {
+        throw new Error('Invalid response: No download URL provided');
+      }
       
       // Create an anchor element to handle the download
       const a = document.createElement('a');

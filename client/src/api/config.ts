@@ -95,9 +95,10 @@ export const API_ENDPOINTS = {
   REPORTS: {
     BASE: `${API_BASE_URL}/api/reports/`,
     DETAIL: (id: number) => `${API_BASE_URL}/api/reports/${id}/`,
-    GENERATE: `${API_BASE_URL}/api/reports/generate_tender_report/`,
+    GENERATE: `${API_BASE_URL}/api/reports/generate/`,
     DOWNLOAD: (id: number) => `${API_BASE_URL}/api/reports/${id}/download/`,
-    REPORT_TYPES: `${API_BASE_URL}/api/reports/report_types/`,
+    // Adding REPORT_TYPES endpoint to match URL used in server/aadf/urls.py
+    REPORT_TYPES: `${API_BASE_URL}/api/reports/types/`, 
     GENERATE_COMPARATIVE: `${API_BASE_URL}/api/reports/generate_comparative_report/`,
     GENERATE_VENDOR: `${API_BASE_URL}/api/reports/generate_vendor_report/`,
     GENERATE_ARCHIVE: `${API_BASE_URL}/api/reports/generate_archive/`
