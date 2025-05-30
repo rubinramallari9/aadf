@@ -19,7 +19,7 @@ import json
 
 from ..models import (
     User, Tender, TenderDocument, Offer, OfferDocument, Report, AuditLog,
-    DocumentVersion  # Import DocumentVersion from models
+    DocumentVersion
 )
 from ..serializers import TenderDocumentSerializer, OfferDocumentSerializer
 from ..permissions import (
@@ -174,6 +174,21 @@ class TenderDocumentViewSet(viewsets.ModelViewSet):
                     existing_document.uploaded_by = request.user
                     existing_document.save()
                     
+                    # Log the update
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='update_tender_document',
+                        entity_type='tender_document',
+                        entity_id=existing_document.id,
+                        details={
+                            'tender_id': tender.id,
+                            'tender_reference': tender.reference_number,
+                            'version': version_number,
+                            'filename': file.name
+                        },
+                        ip_address=request.META.get('REMOTE_ADDR', '')
+                    )
+                    
                     serializer = self.get_serializer(existing_document)
                     return Response(serializer.data, status=status.HTTP_200_OK)
                     
@@ -192,6 +207,20 @@ class TenderDocumentViewSet(viewsets.ModelViewSet):
                     file_path=file_path,
                     file_size=file.size,
                     mime_type=file.content_type
+                )
+                
+                # Log the creation
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='create_tender_document',
+                    entity_type='tender_document',
+                    entity_id=document.id,
+                    details={
+                        'tender_id': tender.id,
+                        'tender_reference': tender.reference_number,
+                        'filename': file.name
+                    },
+                    ip_address=request.META.get('REMOTE_ADDR', '')
                 )
                 
                 serializer = self.get_serializer(document)
@@ -231,6 +260,20 @@ class TenderDocumentViewSet(viewsets.ModelViewSet):
                 document_id=document.id
             ).delete()
                 
+            # Log the deletion
+            AuditLog.objects.create(
+                user=request.user,
+                action='delete_tender_document',
+                entity_type='tender_document',
+                entity_id=document.id,
+                details={
+                    'tender_id': document.tender.id,
+                    'tender_reference': document.tender.reference_number,
+                    'filename': document.original_filename
+                },
+                ip_address=request.META.get('REMOTE_ADDR', '')
+            )
+            
             # Delete the document record
             document.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -293,6 +336,19 @@ class TenderDocumentViewSet(viewsets.ModelViewSet):
                     content_type=version.mime_type or 'application/octet-stream'
                 )
                 response['Content-Disposition'] = f'attachment; filename="{version.original_filename}"'
+                
+                # Log the download
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='download_tender_document_version',
+                    entity_type='tender_document',
+                    entity_id=document.id,
+                    details={
+                        'version_number': version.version_number,
+                        'filename': version.original_filename
+                    },
+                    ip_address=request.META.get('REMOTE_ADDR', '')
+                )
                 
                 return response
             else:
@@ -464,6 +520,22 @@ class OfferDocumentViewSet(viewsets.ModelViewSet):
                     existing_document.mime_type = file.content_type
                     existing_document.save()
                     
+                    # Log the update
+                    AuditLog.objects.create(
+                        user=request.user,
+                        action='update_offer_document',
+                        entity_type='offer_document',
+                        entity_id=existing_document.id,
+                        details={
+                            'offer_id': offer.id,
+                            'tender_reference': offer.tender.reference_number,
+                            'vendor_name': offer.vendor.name,
+                            'version': version_number,
+                            'filename': file.name
+                        },
+                        ip_address=request.META.get('REMOTE_ADDR', '')
+                    )
+                    
                     serializer = self.get_serializer(existing_document)
                     return Response(serializer.data, status=status.HTTP_200_OK)
                     
@@ -482,6 +554,21 @@ class OfferDocumentViewSet(viewsets.ModelViewSet):
                     file_size=file.size,
                     mime_type=file.content_type,
                     document_type=document_type
+                )
+                
+                # Log the creation
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='create_offer_document',
+                    entity_type='offer_document',
+                    entity_id=document.id,
+                    details={
+                        'offer_id': offer.id,
+                        'tender_reference': offer.tender.reference_number,
+                        'vendor_name': offer.vendor.name,
+                        'filename': file.name
+                    },
+                    ip_address=request.META.get('REMOTE_ADDR', '')
                 )
                 
                 serializer = self.get_serializer(document)
@@ -521,6 +608,21 @@ class OfferDocumentViewSet(viewsets.ModelViewSet):
                 document_type='offer',
                 document_id=document.id
             ).delete()
+            
+            # Log the deletion
+            AuditLog.objects.create(
+                user=request.user,
+                action='delete_offer_document',
+                entity_type='offer_document',
+                entity_id=document.id,
+                details={
+                    'offer_id': document.offer.id,
+                    'tender_reference': document.offer.tender.reference_number,
+                    'vendor_name': document.offer.vendor.name,
+                    'filename': document.original_filename
+                },
+                ip_address=request.META.get('REMOTE_ADDR', '')
+            )
                 
             # Delete the document record
             document.delete()
@@ -599,6 +701,21 @@ class OfferDocumentViewSet(viewsets.ModelViewSet):
                 )
                 response['Content-Disposition'] = f'attachment; filename="{version.original_filename}"'
                 
+                # Log the download
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='download_offer_document_version',
+                    entity_type='offer_document',
+                    entity_id=document.id,
+                    details={
+                        'version_number': version.version_number,
+                        'filename': version.original_filename,
+                        'offer_id': document.offer.id,
+                        'vendor_name': document.offer.vendor.name
+                    },
+                    ip_address=request.META.get('REMOTE_ADDR', '')
+                )
+                
                 return response
             else:
                 return Response(
@@ -666,7 +783,19 @@ class OfferDocumentViewSet(viewsets.ModelViewSet):
                 'size_difference': v2.file_size - v1.file_size if v1.file_size and v2.file_size else None
             }
             
-            # For text-based documents, could add diff analysis here using AI
+            # Log the comparison
+            AuditLog.objects.create(
+                user=request.user,
+                action='compare_document_versions',
+                entity_type='offer_document' if hasattr(document, 'offer') else 'tender_document',
+                entity_id=document.id,
+                details={
+                    'version1': v1.version_number,
+                    'version2': v2.version_number,
+                    'filename': document.original_filename
+                },
+                ip_address=request.META.get('REMOTE_ADDR', '')
+            )
             
             return Response(comparison)
         except DocumentVersion.DoesNotExist:
@@ -677,33 +806,30 @@ class OfferDocumentViewSet(viewsets.ModelViewSet):
 
 
 class DocumentDownloadView(APIView):
-    """Handle secure file downloads"""
-    permission_classes = [permissions.IsAuthenticated]
+    """Unified document download handler with enhanced security"""
+    permission_classes = []  # Set explicitly in get() method based on authentication type
 
     def get(self, request, document_type, document_id):
         """
-        Handle document download requests
-        
-        This view supports two modes:
-        1. Direct download with authentication check and permission verification
-        2. Secure link download with signature verification
+        Handle document download requests with support for both:
+        1. Direct authenticated downloads
+        2. Secure link downloads with signature verification
         """
-        # Check for secure download if using a signed URL
+        # Check for secure download signature
         expires = request.query_params.get('expires')
         signature = request.query_params.get('signature')
         
+        # Determine authentication method
         if expires and signature:
-            # Verify the signature
+            # Secure link authentication
             if not verify_document_signature(document_type, document_id, expires, signature):
                 return Response(
                     {'error': 'Invalid or expired download link'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-                
-            # If signature is valid, allow access without permission check
             authenticated_by_signature = True
         else:
-            # If no signature provided, require authentication
+            # Standard authentication
             if not request.user.is_authenticated:
                 return Response(
                     {'error': 'Authentication required'},
@@ -712,13 +838,23 @@ class DocumentDownloadView(APIView):
             authenticated_by_signature = False
                 
         try:
+            # Handle different document types
             if document_type == 'tender':
                 document = get_object_or_404(TenderDocument, id=document_id)
                 
-                # Check if user has permission to download this tender document
+                # Check permissions for tender documents
                 if not authenticated_by_signature:
-                    # Only staff, admin, or vendors for published tenders can download
-                    if request.user.role == 'vendor' and document.tender.status != 'published':
+                    # Staff and admin can access all tender documents
+                    if request.user.role in ['staff', 'admin']:
+                        pass  # Full access
+                    # Vendors can only access documents for published tenders
+                    elif request.user.role == 'vendor' and document.tender.status != 'published':
+                        return Response(
+                            {'error': 'You do not have permission to download this document'},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    # Evaluators can only access documents for closed/awarded tenders
+                    elif request.user.role == 'evaluator' and document.tender.status not in ['closed', 'awarded']:
                         return Response(
                             {'error': 'You do not have permission to download this document'},
                             status=status.HTTP_403_FORBIDDEN
@@ -727,17 +863,20 @@ class DocumentDownloadView(APIView):
             elif document_type == 'offer':
                 document = get_object_or_404(OfferDocument, id=document_id)
                 
-                # Check if user has permission to download this offer document
+                # Check permissions for offer documents
                 if not authenticated_by_signature:
-                    if request.user.role == 'vendor':
-                        # Vendors can only download their own offer documents
+                    # Staff and admin can access all offer documents
+                    if request.user.role in ['staff', 'admin']:
+                        pass  # Full access
+                    # Vendors can only access their own offer documents
+                    elif request.user.role == 'vendor':
                         if not document.offer.vendor.users.filter(id=request.user.id).exists():
                             return Response(
                                 {'error': 'You do not have permission to download this document'},
                                 status=status.HTTP_403_FORBIDDEN
                             )
+                    # Evaluators can only access documents for closed/awarded tenders
                     elif request.user.role == 'evaluator':
-                        # Evaluators can only download documents for closed or awarded tenders
                         if document.offer.tender.status not in ['closed', 'awarded']:
                             return Response(
                                 {'error': 'You do not have permission to download this document'},
@@ -747,7 +886,7 @@ class DocumentDownloadView(APIView):
             elif document_type == 'report':
                 document = get_object_or_404(Report, id=document_id)
                 
-                # Only staff and admin can download reports
+                # Check permissions for reports
                 if not authenticated_by_signature and request.user.role not in ['staff', 'admin']:
                     return Response(
                         {'error': 'You do not have permission to download this report'},
@@ -760,37 +899,46 @@ class DocumentDownloadView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            # Process the file download
             file_path = document.file_path
             if not default_storage.exists(file_path):
                 raise Http404("File not found")
                 
             file = default_storage.open(file_path, 'rb')
             
-            # Determine content type based on file extension
+            # Determine content type based on file extension or MIME type
             content_type = self._get_content_type(document)
             
-            # Create response
+            # Create download response
             response = FileResponse(file, content_type=content_type)
             response['Content-Disposition'] = f'attachment; filename="{document.original_filename}"'
             
-            # Log the download if authenticated
+            # Log the download
             if request.user.is_authenticated:
+                # Authenticated download
                 AuditLog.objects.create(
                     user=request.user,
-                    action='download',
+                    action='download_document',
                     entity_type=document_type,
                     entity_id=document_id,
-                    details={'filename': document.original_filename},
+                    details={
+                        'filename': document.original_filename,
+                        'authenticated': True
+                    },
                     ip_address=request.META.get('REMOTE_ADDR', '')
                 )
             else:
                 # Anonymous download via secure link
                 AuditLog.objects.create(
                     user=None,
-                    action='download_secure_link',
+                    action='download_document_secure_link',
                     entity_type=document_type,
                     entity_id=document_id,
-                    details={'filename': document.original_filename},
+                    details={
+                        'filename': document.original_filename,
+                        'authenticated': False,
+                        'secure_link': True
+                    },
                     ip_address=request.META.get('REMOTE_ADDR', '')
                 )
             
@@ -806,14 +954,17 @@ class DocumentDownloadView(APIView):
             )
     
     def _get_content_type(self, document):
-        """Determine the content type based on file extension"""
+        """Determine the content type based on file extension or MIME type"""
+        # Use the document's MIME type if available
+        if hasattr(document, 'mime_type') and document.mime_type:
+            return document.mime_type
+            
+        # Otherwise determine from filename
         filename = document.original_filename.lower()
-        
-        # Get file extension
         _, ext = os.path.splitext(filename)
         
         # Map extensions to MIME types
-        mime_types = {
+        mime_types = settings.DOCUMENT_MIME_TYPES if hasattr(settings, 'DOCUMENT_MIME_TYPES') else {
             '.pdf': 'application/pdf',
             '.doc': 'application/msword',
             '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -836,7 +987,7 @@ class DocumentDownloadView(APIView):
 
 
 class SecureDownloadLinkView(APIView):
-    """Create secure download links for documents"""
+    """Generate secure download links for documents"""
     permission_classes = [permissions.IsAuthenticated]
     
     def get(self, request, document_type, document_id):
@@ -847,11 +998,12 @@ class SecureDownloadLinkView(APIView):
                 document = get_object_or_404(TenderDocument, id=document_id)
                 
                 # Check permissions
-                if request.user.role == 'vendor' and document.tender.status != 'published':
-                    return Response(
-                        {'error': 'You do not have permission to access this document'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
+                if request.user.role not in ['staff', 'admin']:
+                    if document.tender.status != 'published':
+                        return Response(
+                            {'error': 'You do not have permission to access this document'},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
                     
             elif document_type == 'offer':
                 document = get_object_or_404(OfferDocument, id=document_id)
@@ -887,7 +1039,9 @@ class SecureDownloadLinkView(APIView):
                 )
                 
             # Get expiration time from query params or use default
-            expires_in_minutes = int(request.query_params.get('expires_in', 60))
+            expires_in_minutes = int(request.query_params.get('expires_in', 
+                settings.SECURE_DOCUMENT_DOWNLOAD.get('DEFAULT_EXPIRY_MINUTES', 60) 
+                if hasattr(settings, 'SECURE_DOCUMENT_DOWNLOAD') else 60))
             
             # Generate download URL
             download_url = generate_secure_document_link(document, expires_in_minutes=expires_in_minutes)

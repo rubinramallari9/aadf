@@ -14,6 +14,7 @@ interface User {
   role: string;
 }
 
+
 const VendorCreate: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();

@@ -4,7 +4,7 @@ from .auth_views import LoginView, LogoutView, RegisterView, ChangePasswordView,
 from .tender_views import TenderViewSet
 from .offer_views import OfferViewSet
 from .document_views import (
-    TenderDocumentViewSet, OfferDocumentViewSet, DocumentDownloadView
+    TenderDocumentViewSet, OfferDocumentViewSet, DocumentDownloadView, SecureDownloadLinkView
 )
 from .evaluation_views import EvaluationViewSet, EvaluationCriteriaViewSet
 from .vendor_views import VendorCompanyViewSet, VendorUserViewSet
