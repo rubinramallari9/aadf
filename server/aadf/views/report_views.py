@@ -29,7 +29,7 @@ from ..serializers import ReportSerializer
 from ..permissions import IsStaffOrAdmin
 from ..utils import (
     generate_tender_report, export_tender_data, generate_offer_audit_trail,
-    get_dashboard_statistics
+    get_dashboard_statistics, generate_secure_document_link
 )
 from ..ai_analysis import AIAnalyzer  # Import AIAnalyzer
 
@@ -69,6 +69,529 @@ class ReportViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Set the generator to the current user"""
         serializer.save(generated_by=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def types(self, request):
+        """Get available report types"""
+        report_types = [
+            {
+                'id': 'tender_commission',
+                'name': 'Tender Commission Report',
+                'description': 'Detailed report for the tender commission with all offers and evaluations'
+            },
+            {
+                'id': 'tender_data',
+                'name': 'Tender Data Export',
+                'description': 'Export of tender data in CSV format'
+            },
+            {
+                'id': 'ai_tender_analysis',
+                'name': 'AI-Enhanced Analysis',
+                'description': 'Advanced AI analysis of tender and offers with insights and recommendations'
+            },
+            {
+                'id': 'evaluation_summary',
+                'name': 'Evaluation Summary',
+                'description': 'Summary of all evaluations for a tender'
+            },
+            {
+                'id': 'vendor_performance',
+                'name': 'Vendor Performance Analysis',
+                'description': 'Analysis of vendor performance across tenders'
+            },
+            {
+                'id': 'bidding_analysis',
+                'name': 'Bidding Package Analysis',
+                'description': 'Comprehensive analysis of bidding requirements and competition'
+            }
+        ]
+        
+        return Response(report_types)
+
+    @action(detail=False, methods=['post'])
+    def generate(self, request):
+        """Generate a report based on the provided parameters"""
+        # Extract report generation data
+        tender_id = request.data.get('tender_id')
+        report_type = request.data.get('report_type', 'tender_commission')
+        include_attachments = request.data.get('include_attachments', False)
+        include_ai_analysis = request.data.get('include_ai_analysis', True)
+        date_range = request.data.get('date_range')
+        additional_notes = request.data.get('additional_notes', '')
+        
+        # Validate required fields
+        if not tender_id:
+            return Response(
+                {'error': 'tender_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        try:
+            tender = Tender.objects.get(id=tender_id)
+        except Tender.DoesNotExist:
+            return Response(
+                {'error': 'Tender not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            # Route to appropriate report generation method based on report_type
+            if report_type == 'tender_commission':
+                return self._generate_tender_commission_report(
+                    tender, include_attachments, include_ai_analysis, 
+                    date_range, additional_notes, request
+                )
+            elif report_type == 'ai_tender_analysis':
+                return self._generate_ai_analysis_report(
+                    tender, include_attachments, date_range, 
+                    additional_notes, request
+                )
+            elif report_type == 'tender_data':
+                return self._generate_csv_export_report(
+                    tender, include_ai_analysis, date_range, 
+                    additional_notes, request
+                )
+            elif report_type == 'evaluation_summary':
+                return self._generate_evaluation_summary_report(
+                    tender, include_attachments, date_range, 
+                    additional_notes, request
+                )
+            elif report_type == 'vendor_performance':
+                return self._generate_vendor_performance_report(
+                    tender, include_attachments, date_range, 
+                    additional_notes, request
+                )
+            elif report_type == 'bidding_analysis':
+                return self._generate_bidding_analysis_report(
+                    tender, include_attachments, date_range, 
+                    additional_notes, request
+                )
+            else:
+                return Response(
+                    {'error': f'Unsupported report type: {report_type}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+        except Exception as e:
+            logger.error(f"Error generating report: {str(e)}")
+            return Response(
+                {'error': f'Report generation failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def _generate_tender_commission_report(self, tender, include_attachments, include_ai_analysis, date_range, additional_notes, request):
+        """Generate a standard tender commission report"""
+        # Generate the report
+        report_buffer = generate_tender_report(tender)
+        
+        if not report_buffer:
+            return Response(
+                {'error': 'Failed to generate report'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+        # Save the report file
+        filename = f"tender_commission_{tender.reference_number}_{uuid.uuid4().hex[:8]}.pdf"
+        file_path = f"reports/{filename}"
+        
+        # Save to storage
+        default_storage.save(
+            file_path,
+            ContentFile(report_buffer.getvalue())
+        )
+        
+        # Create report record
+        report = Report.objects.create(
+            tender=tender,
+            generated_by=request.user,
+            report_type='tender_commission',
+            filename=filename,
+            file_path=file_path
+        )
+        
+        # Log the report generation
+        AuditLog.objects.create(
+            user=request.user,
+            action='generate_tender_commission_report',
+            entity_type='tender',
+            entity_id=tender.id,
+            details={
+                'report_id': report.id,
+                'report_type': 'tender_commission',
+                'tender_reference': tender.reference_number,
+                'include_attachments': include_attachments,
+                'include_ai_analysis': include_ai_analysis,
+                'additional_notes': additional_notes
+            },
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+        
+        # Return the report info
+        serializer = self.get_serializer(report)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def _generate_ai_analysis_report(self, tender, include_attachments, date_range, additional_notes, request):
+        """Generate an AI-enhanced analysis report"""
+        # Initialize AI analyzer
+        ai_analyzer = AIAnalyzer()
+        
+        # Generate analytics report
+        report_result = ai_analyzer.generate_analytics_report(tender.id, 'comprehensive')
+        
+        if report_result.get('status') == 'error':
+            return Response(
+                {'error': report_result.get('message', 'AI analysis failed')},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+        # Enhance report data with additional context
+        report_data = report_result.get('report_data', {})
+        report_data['generation_parameters'] = {
+            'include_attachments': include_attachments,
+            'date_range': date_range,
+            'additional_notes': additional_notes,
+            'generated_at': timezone.now().isoformat(),
+            'generated_by': request.user.username
+        }
+        
+        # Save the report data as JSON
+        filename = f"ai_analysis_{tender.reference_number}_{uuid.uuid4().hex[:8]}.json"
+        file_path = f"reports/{filename}"
+        
+        # Save to storage
+        default_storage.save(
+            file_path,
+            ContentFile(json.dumps(report_data, indent=2, default=str))
+        )
+        
+        # Create report record
+        report = Report.objects.create(
+            tender=tender,
+            generated_by=request.user,
+            report_type='ai_tender_analysis',
+            filename=filename,
+            file_path=file_path
+        )
+        
+        # Log the AI report generation
+        AuditLog.objects.create(
+            user=request.user,
+            action='generate_ai_analysis_report',
+            entity_type='tender',
+            entity_id=tender.id,
+            details={
+                'report_id': report.id,
+                'report_type': 'ai_tender_analysis',
+                'tender_reference': tender.reference_number,
+                'include_attachments': include_attachments,
+                'additional_notes': additional_notes
+            },
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+        
+        # Return the report info
+        serializer = self.get_serializer(report)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def _generate_csv_export_report(self, tender, include_ai_analysis, date_range, additional_notes, request):
+        """Generate CSV export with optional AI insights"""
+        # Generate CSV data
+        csv_buffer = export_tender_data(tender)
+        
+        if not csv_buffer:
+            return Response(
+                {'error': 'Failed to generate CSV data'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+        # Get AI insights if requested
+        if include_ai_analysis:
+            ai_analyzer = AIAnalyzer()
+            analysis_result = ai_analyzer.analyze_tender(tender.id)
+            
+            if analysis_result.get('status') == 'success':
+                # Append AI insights to CSV
+                insights_buffer = io.StringIO()
+                writer = csv.writer(insights_buffer)
+                
+                writer.writerow([])
+                writer.writerow(['AI INSIGHTS'])
+                writer.writerow(['Price Analysis'])
+                
+                price_analysis = analysis_result.get('price_analysis', {})
+                if price_analysis.get('analysis_performed', False):
+                    writer.writerow(['Average Price', price_analysis.get('avg_price', 'N/A')])
+                    writer.writerow(['Price Range', price_analysis.get('price_range', 'N/A')])
+                    writer.writerow(['Price Variance', price_analysis.get('price_variance', 'N/A')])
+                
+                writer.writerow([])
+                writer.writerow(['Recommendations'])
+                
+                for rec in analysis_result.get('recommendations', []):
+                    writer.writerow([rec.get('issue', ''), rec.get('description', '')])
+                
+                # Combine the buffers
+                combined_buffer = io.StringIO()
+                csv_buffer.seek(0)
+                combined_buffer.write(csv_buffer.getvalue())
+                insights_buffer.seek(0)
+                combined_buffer.write(insights_buffer.getvalue())
+                csv_buffer = combined_buffer
+        
+        # Save the file
+        filename = f"tender_data_{tender.reference_number}_{uuid.uuid4().hex[:8]}.csv"
+        file_path = f"reports/{filename}"
+        
+        # Save to storage
+        csv_buffer.seek(0)
+        default_storage.save(
+            file_path,
+            ContentFile(csv_buffer.getvalue())
+        )
+        
+        # Create report record
+        report = Report.objects.create(
+            tender=tender,
+            generated_by=request.user,
+            report_type='tender_data',
+            filename=filename,
+            file_path=file_path
+        )
+        
+        # Log the export
+        AuditLog.objects.create(
+            user=request.user,
+            action='generate_csv_export_report',
+            entity_type='tender',
+            entity_id=tender.id,
+            details={
+                'report_id': report.id,
+                'report_type': 'tender_data',
+                'tender_reference': tender.reference_number,
+                'include_ai_analysis': include_ai_analysis,
+                'additional_notes': additional_notes
+            },
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+        
+        # Return the report info
+        serializer = self.get_serializer(report)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def _generate_evaluation_summary_report(self, tender, include_attachments, date_range, additional_notes, request):
+        """Generate evaluation summary report"""
+        # Initialize AI analyzer for evaluation analysis
+        ai_analyzer = AIAnalyzer()
+        report_result = ai_analyzer.generate_analytics_report(tender.id, 'evaluation_focus')
+        
+        if report_result.get('status') == 'error':
+            return Response(
+                {'error': report_result.get('message', 'Evaluation analysis failed')},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Enhance with additional metadata
+        report_data = report_result.get('report_data', {})
+        report_data['generation_parameters'] = {
+            'include_attachments': include_attachments,
+            'date_range': date_range,
+            'additional_notes': additional_notes,
+            'generated_at': timezone.now().isoformat(),
+            'generated_by': request.user.username
+        }
+        
+        # Save as JSON
+        filename = f"evaluation_summary_{tender.reference_number}_{uuid.uuid4().hex[:8]}.json"
+        file_path = f"reports/{filename}"
+        
+        default_storage.save(
+            file_path,
+            ContentFile(json.dumps(report_data, indent=2, default=str))
+        )
+        
+        # Create report record
+        report = Report.objects.create(
+            tender=tender,
+            generated_by=request.user,
+            report_type='evaluation_summary',
+            filename=filename,
+            file_path=file_path
+        )
+        
+        # Log the generation
+        AuditLog.objects.create(
+            user=request.user,
+            action='generate_evaluation_summary_report',
+            entity_type='tender',
+            entity_id=tender.id,
+            details={
+                'report_id': report.id,
+                'report_type': 'evaluation_summary',
+                'tender_reference': tender.reference_number,
+                'additional_notes': additional_notes
+            },
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+        
+        serializer = self.get_serializer(report)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def _generate_vendor_performance_report(self, tender, include_attachments, date_range, additional_notes, request):
+        """Generate vendor performance analysis report"""
+        # Get all vendors who submitted offers for this tender
+        vendors = VendorCompany.objects.filter(offers__tender=tender).distinct()
+        
+        if not vendors.exists():
+            return Response(
+                {'error': 'No vendor offers found for this tender'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Initialize AI analyzer
+        ai_analyzer = AIAnalyzer()
+        
+        # Analyze each vendor
+        vendor_analyses = []
+        for vendor in vendors:
+            analysis_result = ai_analyzer.analyze_vendor_performance(vendor.id)
+            if analysis_result.get('status') == 'success':
+                vendor_analyses.append(analysis_result)
+        
+        # Compile comprehensive report
+        report_data = {
+            'tender_info': {
+                'id': tender.id,
+                'reference_number': tender.reference_number,
+                'title': tender.title,
+                'status': tender.status
+            },
+            'vendor_analyses': vendor_analyses,
+            'summary': {
+                'total_vendors_analyzed': len(vendor_analyses),
+                'report_generated_at': timezone.now().isoformat()
+            },
+            'generation_parameters': {
+                'include_attachments': include_attachments,
+                'date_range': date_range,
+                'additional_notes': additional_notes,
+                'generated_by': request.user.username
+            }
+        }
+        
+        # Save as JSON
+        filename = f"vendor_performance_{tender.reference_number}_{uuid.uuid4().hex[:8]}.json"
+        file_path = f"reports/{filename}"
+        
+        default_storage.save(
+            file_path,
+            ContentFile(json.dumps(report_data, indent=2, default=str))
+        )
+        
+        # Create report record
+        report = Report.objects.create(
+            tender=tender,
+            generated_by=request.user,
+            report_type='vendor_performance',
+            filename=filename,
+            file_path=file_path
+        )
+        
+        # Log the generation
+        AuditLog.objects.create(
+            user=request.user,
+            action='generate_vendor_performance_report',
+            entity_type='tender',
+            entity_id=tender.id,
+            details={
+                'report_id': report.id,
+                'report_type': 'vendor_performance',
+                'tender_reference': tender.reference_number,
+                'vendors_analyzed': len(vendor_analyses),
+                'additional_notes': additional_notes
+            },
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+        
+        serializer = self.get_serializer(report)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def _generate_bidding_analysis_report(self, tender, include_attachments, date_range, additional_notes, request):
+        """Generate bidding package analysis report"""
+        # Initialize AI analyzer
+        ai_analyzer = AIAnalyzer()
+        
+        # Analyze tender
+        analysis_result = ai_analyzer.analyze_tender(tender.id)
+        
+        if analysis_result.get('status') == 'error':
+            return Response(
+                {'error': analysis_result.get('message', 'Bidding analysis failed')},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+        # Extract bidding-specific information
+        bidding_analysis = {
+            'tender_info': analysis_result.get('tender_info', {}),
+            'competition_level': self._get_competition_level(analysis_result),
+            'price_analysis': analysis_result.get('price_analysis', {}),
+            'document_analysis': analysis_result.get('document_analysis', {}),
+            'bidding_recommendations': self._extract_bidding_recommendations(analysis_result)
+        }
+        
+        # Add team evaluation if available
+        team_evaluation = self._analyze_team_requirements(tender)
+        if team_evaluation:
+            bidding_analysis['team_evaluation'] = team_evaluation
+            
+        # Add bidding requirements analysis
+        bidding_analysis['requirements_analysis'] = self._analyze_bidding_requirements(tender)
+        
+        # Add generation parameters
+        bidding_analysis['generation_parameters'] = {
+            'include_attachments': include_attachments,
+            'date_range': date_range,
+            'additional_notes': additional_notes,
+            'generated_at': timezone.now().isoformat(),
+            'generated_by': request.user.username
+        }
+        
+        # Save the analysis as a report
+        filename = f"bidding_analysis_{tender.reference_number}_{uuid.uuid4().hex[:8]}.json"
+        file_path = f"reports/{filename}"
+        
+        # Save to storage
+        default_storage.save(
+            file_path,
+            ContentFile(json.dumps(bidding_analysis, indent=2, default=str))
+        )
+        
+        # Create report record
+        report = Report.objects.create(
+            tender=tender,
+            generated_by=request.user,
+            report_type='bidding_analysis',
+            filename=filename,
+            file_path=file_path
+        )
+        
+        # Log the analysis
+        AuditLog.objects.create(
+            user=request.user,
+            action='generate_bidding_analysis_report',
+            entity_type='tender',
+            entity_id=tender.id,
+            details={
+                'report_id': report.id,
+                'report_type': 'bidding_analysis',
+                'tender_reference': tender.reference_number,
+                'additional_notes': additional_notes
+            },
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+        
+        # Return the report info
+        serializer = self.get_serializer(report)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['post'])
     def generate_tender_report(self, request):
@@ -720,4 +1243,4 @@ class ReportViewSet(viewsets.ModelViewSet):
             ip_address=request.META.get('REMOTE_ADDR', '')
         )
         
-        return response     
+        return response

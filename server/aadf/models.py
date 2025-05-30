@@ -306,10 +306,9 @@ class AuditLog(models.Model):
     def __str__(self):
         return f"{self.user.username if self.user else 'Unknown'} - {self.action} - {self.entity_type}:{self.entity_id}"
 
-
 class Report(models.Model):
     """Generated reports"""
-    tender = models.ForeignKey(Tender, on_delete=models.CASCADE, related_name='reports')
+    tender = models.ForeignKey(Tender, on_delete=models.CASCADE, related_name='reports', null=True, blank=True)  # Make optional
     generated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     report_type = models.CharField(max_length=50)
     filename = models.CharField(max_length=255)
@@ -321,8 +320,11 @@ class Report(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.tender.reference_number} - {self.report_type}"
-
+        if self.tender:
+            return f"{self.tender.reference_number} - {self.report_type}"
+        else:
+            return f"System Report - {self.report_type}"
+        
 class Notification(models.Model):
     """System notifications"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
